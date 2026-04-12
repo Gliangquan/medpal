@@ -1,0 +1,47 @@
+services:
+  medpal-backend:
+    build:
+      context: ./MedPal-backend
+    container_name: medpal-backend
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      DATASOURCE_URL: jdbc:mysql://mysql:3306/medpal?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+      DATASOURCE_USERNAME: root
+      DATASOURCE_PASSWORD: DjmIpJ2PdXs4H3Ju1JYIrfvZ
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: AxBzQbS4wjH9R51b
+      MINIO_SECRET_KEY: NNJxorLf4p7Zd1rdJAurEXgP
+      MINIO_BUCKET_NAME: medpal-project
+      JWT_SECRET: medpal-jwt-secret-please-change-in-production-2026-very-long
+    ports:
+      - "9010:9901"
+    networks:
+      - default
+      - shared-infra
+
+  medpal-frontend:
+    build:
+      context: ./MedPal-frontend
+    container_name: medpal-frontend
+    restart: unless-stopped
+    depends_on:
+      - medpal-backend
+    ports:
+      - "9011:80"
+
+  medpal-uniapp-h5:
+    build:
+      context: ./MedPal-uniapp
+      dockerfile: Dockerfile.h5
+    container_name: medpal-uniapp-h5
+    restart: unless-stopped
+    depends_on:
+      - medpal-backend
+    ports:
+      - "9012:8080"
+
+networks:
+  shared-infra:
+    external: true
+    name: shared-infra

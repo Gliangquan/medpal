@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jcen.medpal.mapper.HospitalMapper">
+
+    <select id="selectNearbyHospitals" resultType="com.jcen.medpal.model.vo.HospitalNearbyVO">
+        SELECT
+            id,
+            hospital_name as hospitalName,
+            hospital_level as hospitalLevel,
+            address,
+            latitude,
+            longitude,
+            phone,
+            introduction,
+            status,
+            create_time as createTime,
+            (
+                6371 * acos(
+                    cos(radians(#{latitude})) * cos(radians(latitude)) *
+                    cos(radians(longitude) - radians(#{longitude})) +
+                    sin(radians(#{latitude})) * sin(radians(latitude))
+                )
+            ) AS distance
+        FROM hospital
+        WHERE status = 1 AND is_delete = 0
+        HAVING distance <![CDATA[ < ]]> #{radius}
+        ORDER BY distance ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

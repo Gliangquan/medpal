@@ -1,0 +1,560 @@
+<template>
+  <view class="page-content">
+    <!-- 加载中 -->
+    <view v-if="!userInfo" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+      <uni-load-more status="loading" />
+    </view>
+
+    <!-- 患者端 -->
+    <view v-else-if="userInfo && userInfo.userRole === 'patient'">
+      <view class="hero-section">
+        <view class="flex flex-between items-center" style="margin-bottom: 16rpx;">
+          <view>
+            <text class="text-lg font-bold text-primary">MedPal陪诊</text>
+            <text class="text-sm text-secondary" style="display: block; margin-top: 6rpx;">让就医更安心</text>
+          </view>
+          <view class="flex gap-sm">
+            <uni-icons type="notification" size="20" @tap="goNotification"></uni-icons>
+            <uni-icons type="chat" size="20" @tap="goChat"></uni-icons>
+          </view>
+        </view>
+        <uni-search-bar v-model="searchKeyword" placeholder="搜索医院 / 科室" cancel-button="none" @confirm="goSearch" />
+      </view>
+
+      <uni-section title="快捷功能" class="section">
+        <uni-grid :column="3" :showBorder="false" :square="false">
+          <uni-grid-item v-for="item in patientActions" :key="item.title">
+            <view style="display: flex; flex-direction: column; align-items: center; padding: 20rpx;" @tap="item.action">
+              <uni-icons :type="item.icon" size="28" color="#2f65f9"></uni-icons>
+              <text class="text-sm text-secondary" style="margin-top: 8rpx;">{{ item.title }}</text>
+            </view>
+          </uni-grid-item>
+        </uni-grid>
+      </uni-section>
+
+      <uni-section title="快捷预约" class="section">
+        <view class="flex gap-sm">
+          <uni-card
+            v-for="card in quickCards"
+            :key="card.duration"
+            :border="false"
+            :padding="18"
+            style="flex: 1; text-align: center;"
+            @tap="quickByDuration(card.duration)"
+          >
+            <text class="text-base font-semibold text-primary">{{ card.label }}</text>
+            <text class="text-sm text-theme" style="display: block; margin: 6rpx 0;">¥{{ card.price }}</text>
+            <text class="text-sm text-muted">立即预约</text>
+          </uni-card>
+        </view>
+      </uni-section>
+
+      <uni-section title="优秀陪诊员" class="section" sub-title="更多" @click="goCompanions">
+        <uni-list :border="false">
+          <uni-list-item
+            v-for="item in topCompanions"
+            :key="item.id"
+            :title="item.userName"
+            :note="item.specialties"
+            :right-text="`评分 ${item.rating}`"
+            @click="goCompanionDetail(item.id)"
+          >
+            <template v-slot:footer>
+              <button size="mini" type="primary" plain style="margin-left: 16rpx;" @tap.stop="quickByCompanion(item.id)">预约</button>
+            </template>
+          </uni-list-item>
+        </uni-list>
+      </uni-section>
+
+      <uni-section title="医院推荐" class="section" sub-title="更多" @click="goHospitals">
+        <view class="hospital-grid">
+          <uni-card
+            v-for="item in hospitals"
+            :key="item.id"
+            :border="false"
+            :padding="16"
+            margin="0"
+            spacing="0"
+            @tap="goHospitalDetail(item.id)"
+          >
+            <scroll-view scroll-y style="height: 140rpx;">
+              <text class="text-base font-semibold text-primary">{{ item.hospitalName }}</text>
+              <view class="flex items-center gap-sm" style="margin: 8rpx 0;">
+                <uni-tag :text="item.hospitalLevel" type="primary" size="small"></uni-tag>
+                <text class="text-sm text-muted">{{ item.rating }} 分</text>
+              </view>
+              <text class="text-sm text-secondary">{{ item.address }}</text>
+            </scroll-view>
+            <button size="mini" type="primary" plain style="margin-top: 8rpx;" @tap.stop="quickByHospital(item.id)">预约</button>
+          </uni-card>
+        </view>
+      </uni-section>
+
+      <uni-section title="最近订单" class="section" v-if="recentOrders.length" sub-title="全部" @click="goOrders">
+        <uni-card
+          v-for="item in recentOrders"
+          :key="item.id"
+          :border="false"
+          :padding="24"
+          style="margin-bottom: 16rpx;"
+          @tap="goOrderDetail(item.id)"
+        >
+          <view class="flex flex-between items-center">
+            <view>
+              <text class="text-sm text-muted">订单号 {{ item.id }}</text>
+              <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">{{ item.createTimeFormatted }}</text>
+            </view>
+            <text class="text-sm font-semibold" :style="{ color: item.statusColor }">{{ item.statusText }}</text>
+          </view>
+          <view style="margin: 16rpx 0;">
+            <text class="text-base font-semibold text-primary">{{ item.hospitalName }}</text>
+            <text class="text-sm text-secondary" style="display: block; margin: 8rpx 0;">{{ item.departmentName }}</text>
+            <text class="text-sm text-muted" style="display: block;">就诊时间：{{ item.appointmentDate }}</text>
+            <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">陪诊时长：{{ item.duration }} 小时</text>
+          </view>
+          <view class="flex flex-between items-center">
+            <text class="text-base font-bold text-theme">¥{{ item.totalPrice }}</text>
+            <view class="flex gap-sm">
+              <button v-if="item.orderStatus === 'pending'" size="mini" @tap.stop="cancelOrder(item.id)">取消</button>
+              <button v-if="item.orderStatus === 'completed'" size="mini" type="primary" plain @tap.stop="goEvaluation(item.id)">评价</button>
+              <button size="mini" type="primary" @tap.stop="goOrderDetail(item.id)">查看详情</button>
+            </view>
+          </view>
+        </uni-card>
+      </uni-section>
+    </view>
+
+    <!-- 陪诊员端 -->
+    <view v-else-if="userInfo && userInfo.userRole === 'companion'">
+      <view class="hero-section">
+        <view class="flex flex-between items-center" style="margin-bottom: 16rpx;">
+          <view>
+            <text class="text-lg font-bold text-primary">陪诊员工作台</text>
+            <text class="text-sm text-secondary" style="display: block; margin-top: 6rpx;">{{ userInfo?.userName }}</text>
+          </view>
+          <view class="flex gap-sm">
+            <uni-icons type="notification" size="20" @tap="goNotification"></uni-icons>
+            <uni-icons type="chat" size="20" @tap="goChat"></uni-icons>
+          </view>
+        </view>
+      </view>
+
+      <uni-section title="快捷功能" class="section">
+        <uni-grid :column="3" :showBorder="false" :square="false">
+          <uni-grid-item v-for="item in companionActions" :key="item.title">
+            <view style="display: flex; flex-direction: column; align-items: center; padding: 20rpx;" @tap="item.action">
+              <uni-icons :type="item.icon" size="28" color="#2f65f9"></uni-icons>
+              <text class="text-sm text-secondary" style="margin-top: 8rpx;">{{ item.title }}</text>
+            </view>
+          </uni-grid-item>
+        </uni-grid>
+      </uni-section>
+
+      <uni-section title="待接单" class="section" v-if="pendingOrders.length">
+        <uni-card
+          v-for="item in pendingOrders"
+          :key="item.id"
+          :border="false"
+          :padding="24"
+          style="margin-bottom: 16rpx;"
+        >
+          <view class="flex flex-between items-center">
+            <view>
+              <text class="text-sm text-muted">订单号 {{ item.id }}</text>
+              <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">{{ item.createTimeFormatted }}</text>
+            </view>
+            <text class="text-sm font-semibold" style="color: #FF9500;">待接单</text>
+          </view>
+          <view style="margin: 16rpx 0;">
+            <text class="text-base font-semibold text-primary">{{ item.hospitalName }}</text>
+            <text class="text-sm text-secondary" style="display: block; margin: 8rpx 0;">{{ item.departmentName }}</text>
+            <text class="text-sm text-muted" style="display: block;">就诊时间：{{ item.appointmentDate }}</text>
+            <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">陪诊时长：{{ item.duration }} 小时</text>
+            <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">患者需求：{{ item.specificNeeds }}</text>
+          </view>
+          <view class="flex flex-between items-center">
+            <text class="text-base font-bold text-theme">¥{{ item.totalPrice }}</text>
+            <view class="flex gap-sm">
+              <button size="mini" type="primary" @tap.stop="acceptOrder(item.id)">接单</button>
+              <button size="mini" @tap.stop="rejectOrder(item.id)">拒单</button>
+            </view>
+          </view>
+        </uni-card>
+      </uni-section>
+
+      <uni-section title="已接单" class="section" v-if="acceptedOrders.length" sub-title="全部" @click="goCompanionOrders">
+        <uni-card
+          v-for="item in acceptedOrders"
+          :key="item.id"
+          :border="false"
+          :padding="24"
+          style="margin-bottom: 16rpx;"
+          @tap="goOrderDetail(item.id)"
+        >
+          <view class="flex flex-between items-center">
+            <view>
+              <text class="text-sm text-muted">订单号 {{ item.id }}</text>
+              <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">{{ item.createTimeFormatted }}</text>
+            </view>
+            <text class="text-sm font-semibold" style="color: #2f65f9;">{{ item.statusText }}</text>
+          </view>
+          <view style="margin: 16rpx 0;">
+            <text class="text-base font-semibold text-primary">{{ item.hospitalName }}</text>
+            <text class="text-sm text-secondary" style="display: block; margin: 8rpx 0;">患者：{{ item.userName }}</text>
+            <text class="text-sm text-muted" style="display: block;">就诊时间：{{ item.appointmentDate }}</text>
+          </view>
+          <view class="flex flex-between items-center">
+            <text class="text-base font-bold text-theme">¥{{ item.totalPrice }}</text>
+            <button size="mini" type="primary" @tap.stop="goOrderDetail(item.id)">查看详情</button>
+          </view>
+        </uni-card>
+      </uni-section>
+
+      <uni-section title="收入统计" class="section">
+        <uni-card :border="false" :padding="24">
+          <view class="flex flex-between items-center" style="margin-bottom: 16rpx;">
+            <view>
+              <text class="text-sm text-muted">总收入</text>
+              <text class="text-lg font-bold text-primary" style="display: block; margin-top: 8rpx;">¥{{ userInfo?.totalIncome || 0 }}</text>
+            </view>
+            <view>
+              <text class="text-sm text-muted">接单数</text>
+              <text class="text-lg font-bold text-primary" style="display: block; margin-top: 8rpx;">{{ userInfo?.serviceCount || 0 }}</text>
+            </view>
+            <view>
+              <text class="text-sm text-muted">评分</text>
+              <text class="text-lg font-bold text-primary" style="display: block; margin-top: 8rpx;">{{ userInfo?.rating || 0 }}</text>
+            </view>
+          </view>
+          <button type="primary" plain style="width: 100%;" @tap="goIncomeDetail">查看详情</button>
+        </uni-card>
+      </uni-section>
+    </view>
+
+    <!-- 错误状态 -->
+    <view v-else style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+      <text style="font-size: 16px; color: #ff5c5c; margin-bottom: 20px;">用户信息加载失败</text>
+      <text style="font-size: 14px; color: #999; margin-bottom: 20px;">userRole: {{ userInfo?.userRole }}</text>
+      <button type="primary" @tap="loadCurrentUser">重新加载</button>
+    </view>
+  </view>
+</template>
+
+<script>
+import {
+  hospitalApi,
+  companionApi,
+  orderApi,
+  notificationApi,
+  userApi
+} from '@/utils/api.js';
+
+const STATUS_TEXT = {
+  pending: '待接单',
+  confirmed: '已接单',
+  serving: '服务中',
+  completed: '已完成',
+  cancelled: '已取消'
+};
+
+const STATUS_COLOR = {
+  pending: '#FF9500',
+  confirmed: '#2f65f9',
+  serving: '#2ac769',
+  completed: '#7b8291',
+  cancelled: '#ff5c5c'
+};
+
+export default {
+  data() {
+    return {
+      searchKeyword: '',
+      quickCards: [
+        { label: '2小时', duration: 2, price: 200 },
+        { label: '半天', duration: 4, price: 400 },
+        { label: '全天', duration: 8, price: 800 }
+      ],
+      patientActions: [],
+      companionActions: [],
+      topCompanions: [],
+      hospitals: [],
+      recentOrders: [],
+      pendingOrders: [],
+      acceptedOrders: [],
+      unreadCount: 0,
+      userInfo: null,
+      loading: false
+    };
+  },
+  computed: {
+    badgeText() {
+      return this.unreadCount > 99 ? '99+' : String(this.unreadCount);
+    }
+  },
+  onLoad() {
+    this.initActions();
+    this.loadCurrentUser();
+  },
+  onShow() {
+    this.refreshOrders();
+    this.refreshNotifications();
+  },
+  methods: {
+    initActions() {
+      this.patientActions = [
+        { title: '预约陪诊', icon: 'calendar', action: this.goAppointment },
+        { title: '我的订单', icon: 'list', action: this.goOrders },
+        { title: '电子病历', icon: 'wallet', action: this.goRecords },
+        { title: '紧急求助', icon: 'help', action: this.goEmergency },
+        { title: '消息通知', icon: 'notification', action: this.goNotification },
+        { title: '陪诊员', icon: 'contact', action: this.goCompanions }
+      ];
+      this.companionActions = [
+        { title: '待接单', icon: 'calendar', action: this.goCompanionOrders },
+        { title: '已接单', icon: 'list', action: this.goCompanionOrders },
+        { title: '服务记录', icon: 'wallet', action: this.goServiceRecords },
+        { title: '收入统计', icon: 'money', action: this.goIncomeDetail },
+        { title: '消息通知', icon: 'notification', action: this.goNotification },
+        { title: '个人资料', icon: 'contact', action: this.goProfile }
+      ];
+    },
+    async loadCurrentUser() {
+      const stored = uni.getStorageSync('userInfo');
+      console.log('存储的用户信息:', stored);
+      if (stored?.id) {
+        this.userInfo = stored;
+        console.log('设置 userInfo:', this.userInfo);
+        this.loadData();
+        try {
+          const refreshed = await userApi.fetchCurrentUser();
+          console.log('刷新后的用户信息:', refreshed);
+          if (refreshed) {
+            this.userInfo = refreshed;
+            uni.setStorageSync('userInfo', refreshed);
+            this.loadData();
+          }
+        } catch (error) {
+          console.warn('刷新用户失败', error);
+          // 即使刷新失败，也使用存储的用户信息
+        }
+      } else {
+        console.log('未找到存储的用户信息，重定向到登录页');
+        // 未登录，重定向到登录页
+        uni.reLaunch({ url: '/pages/login/index' });
+      }
+    },
+    async loadData() {
+      this.loading = true;
+      if (this.userInfo?.userRole === 'patient') {
+        await Promise.all([this.loadHospitals(), this.loadTopCompanions()]);
+        this.refreshOrders();
+      } else if (this.userInfo?.userRole === 'companion') {
+        this.refreshCompanionOrders();
+      }
+      this.refreshNotifications();
+      this.loading = false;
+    },
+    async loadHospitals() {
+      try {
+        const page = await hospitalApi.list({ current: 1, size: 5 });
+        this.hospitals = page.records || [];
+      } catch (error) {
+        console.error('加载医院列表失败', error);
+      }
+    },
+    async loadTopCompanions() {
+      try {
+        const page = await companionApi.list({ current: 1, size: 5 });
+        this.topCompanions = page.records || [];
+      } catch (error) {
+        console.error('加载陪诊员失败', error);
+      }
+    },
+    async refreshOrders() {
+      if (!this.userInfo?.id) {
+        this.recentOrders = [];
+        return;
+      }
+      try {
+        const page = await orderApi.list({
+          current: 1,
+          size: 3,
+          userId: this.userInfo.id
+        });
+        this.recentOrders = (page.records || []).map((order) => ({
+          ...order,
+          statusText: STATUS_TEXT[order.orderStatus] || '未知',
+          statusColor: STATUS_COLOR[order.orderStatus] || '#7b8291'
+        }));
+      } catch (error) {
+        console.error('加载订单失败', error);
+      }
+    },
+    async refreshNotifications() {
+      if (!this.userInfo?.id) {
+        this.unreadCount = 0;
+        return;
+      }
+      try {
+        const [list, unread] = await Promise.all([
+          notificationApi.list({ current: 1, size: 10, userId: this.userInfo.id }),
+          notificationApi.unreadCount(this.userInfo.id)
+        ]);
+        this.unreadCount = Number(unread) || 0;
+      } catch (error) {
+        console.error('加载通知失败', error);
+      }
+    },
+    goSearch() {
+      if (!this.searchKeyword) return;
+      uni.navigateTo({ url: `/pages/hospital/index?keyword=${this.searchKeyword}` });
+    },
+    goNotification() {
+      uni.switchTab({ url: '/pages/notification/index' });
+    },
+    goChat() {
+      uni.navigateTo({ url: '/pages/chat/index' });
+    },
+    goAppointment() {
+      uni.navigateTo({ url: '/pages/appointment/index' });
+    },
+    goOrders() {
+      uni.switchTab({ url: '/pages/order/index' });
+    },
+    goRecords() {
+      uni.navigateTo({ url: '/pages/medical-record/index' });
+    },
+    goEmergency() {
+      uni.navigateTo({ url: '/pages/emergency/index' });
+    },
+    goCompanions() {
+      uni.navigateTo({ url: '/pages/companion/list' });
+    },
+    goHospitals() {
+      uni.navigateTo({ url: '/pages/hospital/index' });
+    },
+    goHospitalDetail(id) {
+      uni.navigateTo({ url: `/pages/hospital/detail?id=${id}` });
+    },
+    goCompanionDetail(id) {
+      uni.navigateTo({ url: `/pages/companion/detail?id=${id}` });
+    },
+    goOrderDetail(id) {
+      uni.navigateTo({ url: `/pages/order/detail?id=${id}` });
+    },
+    quickByDuration(duration) {
+      uni.navigateTo({ url: `/pages/appointment/index?duration=${duration}` });
+    },
+    quickByHospital(hospitalId) {
+      uni.navigateTo({ url: `/pages/appointment/index?hospitalId=${hospitalId}` });
+    },
+    quickByCompanion(companionId) {
+      uni.navigateTo({ url: `/pages/appointment/index?companionId=${companionId}` });
+    },
+    async cancelOrder(id) {
+      uni.showModal({
+        title: '取消订单',
+        content: '确定要取消该订单吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await orderApi.cancel(id, '用户主动取消');
+              uni.showToast({ title: '已取消', icon: 'success' });
+              this.refreshOrders();
+            } catch (error) {
+              uni.showToast({ title: error.message || '取消失败', icon: 'none' });
+            }
+          }
+        }
+      });
+    },
+    goEvaluation(id) {
+      uni.navigateTo({ url: `/pages/order/evaluation?id=${id}` });
+    },
+    async refreshCompanionOrders() {
+      if (!this.userInfo?.id) {
+        this.pendingOrders = [];
+        this.acceptedOrders = [];
+        return;
+      }
+      try {
+        const page = await orderApi.list({
+          current: 1,
+          size: 10,
+          companionId: this.userInfo.id
+        });
+        const orders = (page.records || []).map((order) => ({
+          ...order,
+          statusText: STATUS_TEXT[order.orderStatus] || '未知',
+          statusColor: STATUS_COLOR[order.orderStatus] || '#7b8291'
+        }));
+        this.pendingOrders = orders.filter(o => o.orderStatus === 'pending').slice(0, 3);
+        this.acceptedOrders = orders.filter(o => ['confirmed', 'serving'].includes(o.orderStatus)).slice(0, 3);
+      } catch (error) {
+        console.error('加载陪诊员订单失败', error);
+      }
+    },
+    async acceptOrder(id) {
+      uni.showModal({
+        title: '接单确认',
+        content: '确定要接受该订单吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await orderApi.accept(id, this.userInfo.id);
+              uni.showToast({ title: '接单成功', icon: 'success' });
+              this.refreshCompanionOrders();
+            } catch (error) {
+              uni.showToast({ title: error.message || '接单失败', icon: 'none' });
+            }
+          }
+        }
+      });
+    },
+    async rejectOrder(id) {
+      uni.showModal({
+        title: '拒单确认',
+        content: '确定要拒绝该订单吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await orderApi.reject(id, '陪诊员主动拒单');
+              uni.showToast({ title: '已拒单', icon: 'success' });
+              this.refreshCompanionOrders();
+            } catch (error) {
+              uni.showToast({ title: error.message || '拒单失败', icon: 'none' });
+            }
+          }
+        }
+      });
+    },
+    goCompanionOrders() {
+      uni.switchTab({ url: '/pages/order/index' });
+    },
+    goServiceRecords() {
+      uni.navigateTo({ url: '/pages/service-record/index' });
+    },
+    goIncomeDetail() {
+      uni.navigateTo({ url: '/pages/income/index' });
+    },
+    goProfile() {
+      uni.switchTab({ url: '/pages/profile/index' });
+    }
+  }
+};
+</script>
+
+<style scoped lang="scss">
+@import "@/styles/common.scss";
+
+.page-content {
+  background: #f4f6fb;
+  min-height: 100vh;
+}
+
+.hospital-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+}
+</style>

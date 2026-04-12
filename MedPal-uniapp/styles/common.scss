@@ -1,0 +1,199 @@
+// 全局公共样式
+
+// 变量定义（主题色）
+$primary-color: #2f65f9;
+$primary-light: #f7f9ff;
+$text-primary: #333;
+$text-secondary: #666;
+$text-muted: #999;
+$bg-page: linear-gradient(160deg, #f3f6ff, #ffffff 60%);
+$bg-card: #ffffff;
+$border-color: #e5e5e5;
+
+// 间距
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 40rpx;
+
+// 圆角
+$radius-sm: 8rpx;
+$radius-md: 16rpx;
+$radius-lg: 24rpx;
+$radius-full: 999rpx;
+
+// 页面容器
+.page-container {
+  min-height: 100vh;
+  padding: $spacing-xl;
+  background: $bg-page;
+  box-sizing: border-box;
+}
+
+// 卡片
+.card {
+  background: $bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+}
+
+// 页面头部
+.page-header {
+  text-align: center;
+  margin-bottom: $spacing-lg;
+
+  .title {
+    display: block;
+    font-size: 36rpx;
+    font-weight: 600;
+    color: $text-primary;
+  }
+
+  .subtitle {
+    display: block;
+    font-size: 26rpx;
+    color: $text-secondary;
+    margin-top: $spacing-xs;
+  }
+}
+
+// 表单
+.form {
+  .input-item {
+    margin-top: $spacing-md;
+  }
+}
+
+// 按钮容器
+.btn-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: $spacing-lg;
+}
+
+// 主要按钮
+.btn-primary {
+  width: 280rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: $primary-color;
+  color: #fff;
+  border-radius: $radius-full;
+  font-size: 28rpx;
+  text-align: center;
+
+  &[disabled] {
+    opacity: 0.6;
+  }
+}
+
+// 幽灵按钮
+.btn-ghost {
+  width: 280rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: #fff;
+  color: $primary-color;
+  border: 2rpx solid $primary-color;
+  border-radius: $radius-full;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+// 链接
+.link {
+  font-size: 26rpx;
+  color: $primary-color;
+}
+
+// 链接组
+.links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $spacing-md;
+
+  text {
+    @extend .link;
+  }
+}
+
+// 居中 flex
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// 页面内容区
+.page-content {
+  padding: $spacing-md;
+}
+
+// Hero 区域
+.hero-section {
+  background: linear-gradient(145deg, #eef3ff, #ffffff);
+  padding: $spacing-md;
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+}
+
+// Section 区域
+.section {
+  margin-top: $spacing-lg;
+}
+
+// 卡片网格
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-xs;
+}
+
+// 横向滚动列表
+.scroll-list {
+  display: flex;
+  gap: $spacing-sm;
+  overflow-x: auto;
+}
+
+// 列表项
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm 0;
+}
+
+// 文本省略
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 文字颜色
+.text-primary { color: $text-primary; }
+.text-secondary { color: $text-secondary; }
+.text-muted { color: $text-muted; }
+.text-theme { color: $primary-color; }
+
+// 字体大小
+.text-sm { font-size: 22rpx; }
+.text-base { font-size: 26rpx; }
+.text-lg { font-size: 32rpx; }
+
+// 字重
+.font-normal { font-weight: 400; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+// Flex 工具
+.flex { display: flex; }
+.flex-between { justify-content: space-between; }
+.flex-around { justify-content: space-around; }
+.items-center { align-items: center; }
+.gap-sm { gap: $spacing-sm; }
+.gap-md { gap: $spacing-md; }
