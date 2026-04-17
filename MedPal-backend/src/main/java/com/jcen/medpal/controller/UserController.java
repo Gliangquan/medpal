@@ -18,6 +18,7 @@ import com.jcen.medpal.model.dto.user.UserImportRequest;
 import com.jcen.medpal.model.dto.user.UserLoginRequest;
 import com.jcen.medpal.model.dto.user.UserQueryRequest;
 import com.jcen.medpal.model.dto.user.UserRegisterRequest;
+import com.jcen.medpal.model.dto.user.UserResetPasswordRequest;
 import com.jcen.medpal.model.dto.user.UserCertificationAuditRequest;
 import com.jcen.medpal.model.dto.user.UserUpdateMyRequest;
 import com.jcen.medpal.model.dto.user.WeChatLoginRequest;
@@ -148,6 +149,24 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         boolean result = userService.userLogout(request);
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 手机号重置密码
+     *
+     * @param userResetPasswordRequest 重置密码请求
+     * @return 是否成功
+     */
+    @PostMapping("/reset-password")
+    public BaseResponse<Boolean> resetPassword(@RequestBody UserResetPasswordRequest userResetPasswordRequest) {
+        if (userResetPasswordRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        boolean result = userService.resetPasswordByPhone(
+                userResetPasswordRequest.getUserPhone(),
+                userResetPasswordRequest.getNewPassword(),
+                userResetPasswordRequest.getCheckPassword());
         return ResultUtils.success(result);
     }
 

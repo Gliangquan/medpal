@@ -159,6 +159,50 @@
           </div>
         </div>
 
+        <a-modal
+          v-model:open="resetPasswordVisible"
+          title="找回密码"
+          ok-text="确认重置"
+          cancel-text="取消"
+          :confirm-loading="resetLoading"
+          @ok="submitResetPassword"
+          @cancel="closeResetPassword"
+        >
+          <a-form layout="vertical">
+            <a-form-item label="手机号" required>
+              <a-input
+                v-model:value="resetPasswordForm.userPhone"
+                placeholder="请输入注册手机号"
+                maxlength="11"
+              >
+                <template #prefix>
+                  <phone-outlined />
+                </template>
+              </a-input>
+            </a-form-item>
+            <a-form-item label="新密码" required>
+              <a-input-password
+                v-model:value="resetPasswordForm.newPassword"
+                placeholder="请输入新密码"
+              >
+                <template #prefix>
+                  <lock-outlined />
+                </template>
+              </a-input-password>
+            </a-form-item>
+            <a-form-item label="确认新密码" required>
+              <a-input-password
+                v-model:value="resetPasswordForm.checkPassword"
+                placeholder="请再次输入新密码"
+              >
+                <template #prefix>
+                  <lock-outlined />
+                </template>
+              </a-input-password>
+            </a-form-item>
+          </a-form>
+        </a-modal>
+
         <!-- 页脚 -->
         <div class="login-footer">
           <a-divider style="margin: 12px 0" />
@@ -179,8 +223,8 @@ import {
   ShopOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons-vue';
-import { userLogin } from '../api';
-import type { UserLoginRequest } from '../api';
+import { resetPassword, userLogin } from '../api';
+import type { UserLoginRequest, UserResetPasswordRequest } from '../api';
 
 const activeKey = ref<'phone' | 'account'>('account');
 const loginForm = ref({
@@ -189,6 +233,13 @@ const loginForm = ref({
   userPassword: '',
 });
 const loading = ref(false);
+const resetLoading = ref(false);
+const resetPasswordVisible = ref(false);
+const resetPasswordForm = ref<UserResetPasswordRequest>({
+  userPhone: '',
+  newPassword: '',
+  checkPassword: '',
+});
 
 // 登录方法
 const handleLogin = async () => {
@@ -232,7 +283,50 @@ const handleRegister = () => {
 
 // 找回密码方法
 const handleForgotPassword = () => {
-  message.info('找回密码功能开发中');
+  resetPasswordForm.value = {
+    userPhone: loginForm.value.userPhone || '',
+    newPassword: '',
+    checkPassword: '',
+  };
+  resetPasswordVisible.value = true;
+};
+
+const closeResetPassword = () => {
+  resetPasswordVisible.value = false;
+};
+
+const submitResetPassword = async () => {
+  const { userPhone, newPassword, checkPassword } = resetPasswordForm.value;
+  if (!userPhone) {
+    message.warning('请输入手机号');
+    return;
+  }
+  if (!/^1\d{10}$/.test(userPhone)) {
+    message.warning('请输入正确的手机号');
+    return;
+  }
+  if (!newPassword || newPassword.length < 6) {
+    message.warning('新密码不能少于 6 位');
+    return;
+  }
+  if (newPassword !== checkPassword) {
+    message.warning('两次输入的新密码不一致');
+    return;
+  }
+
+  try {
+    resetLoading.value = true;
+    await resetPassword({ userPhone, newPassword, checkPassword });
+    message.success('密码重置成功，请使用新密码登录');
+    activeKey.value = 'phone';
+    loginForm.value.userPhone = userPhone;
+    loginForm.value.userPassword = newPassword;
+    resetPasswordVisible.value = false;
+  } catch (error) {
+    // message handled by interceptor
+  } finally {
+    resetLoading.value = false;
+  }
 };
 </script>
 

@@ -5,6 +5,7 @@ import com.jcen.medpal.mapper.AppointmentOrderMapper;
 import com.jcen.medpal.mapper.DepartmentMapper;
 import com.jcen.medpal.mapper.DoctorMapper;
 import com.jcen.medpal.mapper.HospitalMapper;
+import com.jcen.medpal.mapper.LegacyCompanionMapper;
 import com.jcen.medpal.mapper.UserMapper;
 import com.jcen.medpal.model.entity.AppointmentOrder;
 import com.jcen.medpal.model.entity.Department;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Date;
+import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -39,6 +41,9 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private LegacyCompanionMapper legacyCompanionMapper;
 
     @Autowired
     private EvaluationService evaluationService;
@@ -259,12 +264,25 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
             }
         }
 
+        if (order.getUserId() != null) {
+            User patient = userMapper.selectById(order.getUserId());
+            if (patient != null) {
+                vo.setPatientPhone(patient.getUserPhone());
+            }
+        }
+
         // 查询陪诊员信息
         if (order.getCompanionId() != null) {
-            User companion = userMapper.selectById(order.getCompanionId());
+            User companion = getCompanionUser(order.getCompanionId());
             if (companion != null) {
                 vo.setCompanionName(companion.getUserName());
                 vo.setCompanionPhone(companion.getUserPhone());
+            } else {
+                Map<String, Object> legacyCompanion = legacyCompanionMapper.selectBasicById(order.getCompanionId());
+                if (legacyCompanion != null) {
+                    vo.setCompanionName((String) legacyCompanion.get("companionName"));
+                    vo.setCompanionPhone((String) legacyCompanion.get("companionPhone"));
+                }
             }
         }
 
@@ -275,7 +293,7 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
         if (order == null || order.getCompanionId() == null) {
             return false;
         }
-        User companion = userMapper.selectById(order.getCompanionId());
+        User companion = getCompanionUser(order.getCompanionId());
         if (companion == null) {
             return false;
         }
@@ -295,6 +313,17 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
         }
         companion.setUpdateTime(new Date());
         return userMapper.updateById(companion) > 0;
+    }
+
+    private User getCompanionUser(Long companionId) {
+        if (companionId == null) {
+            return null;
+        }
+        User companion = userMapper.selectById(companionId);
+        if (companion == null || !"companion".equals(companion.getUserRole())) {
+            return null;
+        }
+        return companion;
     }
 
     private BigDecimal calculateCompanionIncome(AppointmentOrder order) {

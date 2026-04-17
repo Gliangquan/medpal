@@ -26,7 +26,8 @@
             allow-clear
           >
             <a-select-option value="paid">已支付</a-select-option>
-            <a-select-option value="pending">待支付</a-select-option>
+            <a-select-option value="unpaid">未支付</a-select-option>
+            <a-select-option value="processing">处理中</a-select-option>
             <a-select-option value="failed">支付失败</a-select-option>
             <a-select-option value="refunded">已退款</a-select-option>
           </a-select>
@@ -87,7 +88,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
-import { listPayments } from '../../api';
+import { listPayments, type PaymentVO } from '../../api';
 
 const columns = [
   { title: '支付号', dataIndex: 'paymentNo', key: 'paymentNo', width: 150 },
@@ -100,12 +101,12 @@ const columns = [
   { title: '操作', key: 'action', width: 100, fixed: 'right' },
 ];
 
-const tableData = ref([]);
+const tableData = ref<PaymentVO[]>([]);
 const loading = ref(false);
 const searchText = ref('');
 const filterStatus = ref('');
 const detailModalVisible = ref(false);
-const selectedPayment = ref(null);
+const selectedPayment = ref<PaymentVO | null>(null);
 
 const pagination = reactive({
   current: 1,
@@ -119,9 +120,11 @@ const pagination = reactive({
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
     paid: 'green',
+    unpaid: 'orange',
     pending: 'orange',
+    processing: 'blue',
     failed: 'red',
-    refunded: 'blue',
+    refunded: 'purple',
   };
   return colors[status] || 'default';
 };
@@ -129,7 +132,9 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   const texts: Record<string, string> = {
     paid: '已支付',
+    unpaid: '未支付',
     pending: '待支付',
+    processing: '处理中',
     failed: '支付失败',
     refunded: '已退款',
   };
@@ -144,14 +149,15 @@ const handleSearch = () => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const response = await listPayments(pagination.current, pagination.pageSize);
-    
-    if (response.code === 0) {
-      tableData.value = response.data.records || [];
-      pagination.total = response.data.total || 0;
-    } else {
-      message.error(response.message || '获取数据失败');
-    }
+    const response = await listPayments(
+      pagination.current,
+      pagination.pageSize,
+      searchText.value || undefined,
+      (filterStatus.value || undefined) as any
+    );
+
+    tableData.value = response.data.records || [];
+    pagination.total = response.data.total || 0;
   } catch (error) {
     message.error('获取数据失败');
   } finally {
@@ -159,7 +165,7 @@ const fetchData = async () => {
   }
 };
 
-const showDetailModal = (record: any) => {
+const showDetailModal = (record: PaymentVO) => {
   selectedPayment.value = record;
   detailModalVisible.value = true;
 };

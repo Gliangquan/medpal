@@ -1,5 +1,7 @@
 package com.jcen.medpal.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jcen.medpal.common.ErrorCode;
 import com.jcen.medpal.exception.BusinessException;
@@ -10,6 +12,7 @@ import com.jcen.medpal.model.entity.Payment;
 import com.jcen.medpal.model.vo.PaymentVO;
 import com.jcen.medpal.service.AppointmentOrderService;
 import com.jcen.medpal.service.PaymentService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
 
 @Service
 public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> implements PaymentService {
@@ -158,6 +162,23 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
             return null;
         }
         return convertToVO(payment);
+    }
+
+    @Override
+    public IPage<PaymentVO> listPayments(long current, long size, String keyword, String paymentStatus) {
+        Page<Payment> page = new Page<>(current, size);
+        IPage<Payment> paymentPage = this.lambdaQuery()
+                .and(StringUtils.isNotBlank(keyword), wrapper -> wrapper
+                        .like(Payment::getPaymentNo, keyword)
+                        .or()
+                        .like(Payment::getOrderNo, keyword))
+                .eq(StringUtils.isNotBlank(paymentStatus), Payment::getPaymentStatus, paymentStatus)
+                .orderByDesc(Payment::getCreateTime)
+                .page(page);
+
+        Page<PaymentVO> result = new Page<>(current, size, paymentPage.getTotal());
+        result.setRecords(paymentPage.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
+        return result;
     }
 
     @Override

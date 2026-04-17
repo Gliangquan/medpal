@@ -196,6 +196,10 @@ public class AppointmentOrderController {
             if (!isAdmin && !isPatientOwner && !isCompanionOwner && !isCompanionViewingMarket) {
                 return ResultUtils.error(40300, "无权限查看该订单");
             }
+            if (isCompanionViewingMarket) {
+                orderDetail.setPatientPhone(null);
+                orderDetail.setSpecificNeeds(maskContactPhone(orderDetail.getSpecificNeeds()));
+            }
             return ResultUtils.success(orderDetail);
         } catch (Exception e) {
             return ResultUtils.error(40000, "查询订单失败");
@@ -339,5 +343,12 @@ public class AppointmentOrderController {
         } catch (Exception e) {
             return ResultUtils.error(40000, "更新失败");
         }
+    }
+
+    private String maskContactPhone(String specificNeeds) {
+        if (StringUtils.isBlank(specificNeeds)) {
+            return specificNeeds;
+        }
+        return specificNeeds.replaceAll("联系手机号：[^；\\s]+", "联系手机号：平台内联系");
     }
 }

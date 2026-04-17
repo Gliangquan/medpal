@@ -3,6 +3,7 @@ package com.jcen.medpal.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.jcen.medpal.mapper.AppointmentOrderMapper;
 import com.jcen.medpal.mapper.EvaluationMapper;
+import com.jcen.medpal.mapper.LegacyCompanionMapper;
 import com.jcen.medpal.mapper.PaymentMapper;
 import com.jcen.medpal.mapper.UserMapper;
 import com.jcen.medpal.model.entity.AppointmentOrder;
@@ -39,11 +40,14 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Resource
     private PaymentMapper paymentMapper;
 
+    @Resource
+    private LegacyCompanionMapper legacyCompanionMapper;
+
     @Override
     public Object getDashboardData() {
         Map<String, Object> dashboard = new HashMap<>();
         long totalUsers = countUsersByRoles("user", "patient", "companion", "admin");
-        long totalCompanions = countUsersByRoles("companion");
+        long totalCompanions = countRegisteredCompanions();
         long totalOrders = countOrdersBetween(null, null);
         BigDecimal totalRevenue = sumRevenueBetween(null, null);
         double avgRating = getAverageRatingBetween(null, null);
@@ -65,7 +69,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         stats.put("startDate", start.toString());
         stats.put("endDate", end.toString());
         stats.put("totalUsers", countUsersByRoles("user", "patient", "companion", "admin"));
-        stats.put("totalCompanions", countUsersByRoles("companion"));
+        stats.put("totalCompanions", countRegisteredCompanions());
         stats.put("totalOrders", countOrdersBetween(start, end));
         stats.put("avgRating", getAverageRatingBetween(start, end));
         stats.put("trend", buildDailyTrend(start, end));
@@ -96,7 +100,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         Map<String, Object> stats = new HashMap<>();
         stats.put("startDate", start.toString());
         stats.put("endDate", end.toString());
-        stats.put("totalCompanions", countUsersByRoles("companion"));
+        stats.put("totalCompanions", countRegisteredCompanions());
         stats.put("approvedCompanions", countApprovedCompanions());
         stats.put("activeCompanions", countActiveCompanionsBetween(start, end));
         stats.put("averageRating", getAverageRatingBetween(start, end));
@@ -146,6 +150,15 @@ public class StatisticsServiceImpl implements StatisticsService {
         return count == null ? 0L : count;
     }
 
+    private long countRegisteredCompanions() {
+        long userCompanionCount = countUsersByRoles("companion");
+        if (userCompanionCount > 0) {
+            return userCompanionCount;
+        }
+        Long legacyCount = legacyCompanionMapper.countAllCompanions();
+        return legacyCount == null ? 0L : legacyCount;
+    }
+
     private long countApprovedCompanions() {
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("is_delete", 0)
@@ -153,7 +166,11 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .eq("real_name_status", "approved")
                 .eq("qualification_status", "approved");
         Long count = userMapper.selectCount(wrapper);
-        return count == null ? 0L : count;
+        if (count != null && count > 0) {
+            return count;
+        }
+        Long legacyCount = legacyCompanionMapper.countApprovedCompanions();
+        return legacyCount == null ? 0L : legacyCount;
     }
 
     private long countOrdersBetween(LocalDate start, LocalDate end) {

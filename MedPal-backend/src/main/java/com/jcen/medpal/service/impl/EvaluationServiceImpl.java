@@ -60,7 +60,7 @@ public class EvaluationServiceImpl extends ServiceImpl<EvaluationMapper, Evaluat
             return false;
         }
         User companion = userMapper.selectById(companionId);
-        if (companion == null) {
+        if (companion == null || !"companion".equals(companion.getUserRole())) {
             return false;
         }
         Double averageRating = getCompanionAverageRating(companionId);

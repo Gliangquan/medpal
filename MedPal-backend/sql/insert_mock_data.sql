@@ -7,6 +7,7 @@ DELETE FROM notification;
 DELETE FROM service_record;
 DELETE FROM evaluation;
 DELETE FROM appointment_order;
+DELETE FROM medical_record;
 DELETE FROM doctor;
 DELETE FROM department;
 DELETE FROM hospital;
@@ -153,6 +154,12 @@ INSERT INTO appointment_order (order_no, user_id, companion_id, hospital_id, dep
 ('#202502011234567907', 18, 8, 3, 9, 10, '2025-02-27 15:30:00', 'half_day', '陪同检查、协助挂号', 'pending', 220.00, 200.00, 0.00, 20.00, 'unpaid', '2025-02-10 13:30:00'),
 ('#202502011234567908', 19, 9, 1, 1, 2, '2025-02-28 09:30:00', '2h', '取报告、协助缴费', 'pending', 110.00, 100.00, 0.00, 10.00, 'unpaid', '2025-02-11 08:45:00'),
 ('#202502011234567909', 20, 10, 2, 4, 5, '2025-03-01 10:00:00', 'full_day', '全天陪诊、心理疏导', 'pending', 385.00, 350.00, 0.00, 35.00, 'unpaid', '2025-02-11 10:00:00');
+
+-- ==================== 病历表数据 ====================
+INSERT INTO medical_record (user_id, record_no, hospital_name, department_name, doctor_name, visit_date, diagnosis, symptoms, treatment, prescription, check_results, doctor_advice, attachments, create_time) VALUES
+(1, 'MR202502100001', '北京协和医院', '心内科', '王医生', '2025-02-10 09:00:00', '高血压伴心律不齐', '头晕、胸闷、心悸', '建议规律服药并复查心电图', '缬沙坦片，每日一次', '心电图提示窦性心律不齐', '低盐饮食，避免熬夜', '/api/file/preview/medical_record/1/report-ecg-20250210.jpg', '2025-02-10 16:30:00'),
+(2, 'MR202502110001', '北京大学第一医院', '妇产科', '陈医生', '2025-02-11 10:00:00', '子宫肌瘤随访', '月经量增多', '建议定期复查彩超', '', '彩超提示肌瘤稳定', '三个月后复诊', '', '2025-02-11 17:10:00'),
+(3, 'MR202502120001', '中国人民解放军总医院', '消化科', '周医生', '2025-02-12 14:00:00', '慢性胃炎', '胃胀、反酸', '口服抑酸药物治疗', '奥美拉唑，每日一次', '胃镜提示慢性浅表性胃炎', '清淡饮食，少食多餐', '/api/file/preview/medical_record/3/gastroscopy-20250212.pdf', '2025-02-12 18:00:00');
 
 -- ==================== 评价表数据 ====================
 INSERT INTO evaluation (order_id, user_id, companion_id, professionalism_score, attitude_score, efficiency_score, satisfaction_score, average_score, evaluation_text, status, create_time) VALUES

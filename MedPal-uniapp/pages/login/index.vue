@@ -35,7 +35,7 @@
 
         <view class="links">
           <text @tap="showRegister = true">注册账号</text>
-          <text @tap="forgetPassword">忘记密码</text>
+          <text @tap="openResetPasswordPopup">忘记密码</text>
         </view>
 
         <view class="other-login">
@@ -91,6 +91,27 @@
         </view>
       </view>
     </view>
+
+    <uni-popup ref="resetPasswordPopup" type="center">
+      <view class="reset-password-popup">
+        <view class="reset-password-title">找回密码</view>
+        <view class="input-item">
+          <uni-easyinput v-model="resetPasswordForm.userPhone" type="number" placeholder="请输入注册手机号" />
+        </view>
+        <view class="input-item">
+          <uni-easyinput v-model="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码（至少 6 位）" />
+        </view>
+        <view class="input-item">
+          <uni-easyinput v-model="resetPasswordForm.checkPassword" type="password" placeholder="请再次输入新密码" />
+        </view>
+        <view class="reset-password-actions">
+          <button class="btn-ghost action-btn" @tap="closeResetPasswordPopup">取消</button>
+          <button class="btn-primary action-btn" :disabled="resettingPassword" @tap="handleResetPassword">
+            {{ resettingPassword ? '提交中...' : '确认重置' }}
+          </button>
+        </view>
+      </view>
+    </uni-popup>
   </view>
 </template>
 
@@ -118,8 +139,14 @@ export default {
         userRole: 'patient',
         idCard: ''
       },
+      resetPasswordForm: {
+        userPhone: '',
+        newPassword: '',
+        checkPassword: ''
+      },
       loading: false,
-      registering: false
+      registering: false,
+      resettingPassword: false
     };
   },
   computed: {
@@ -210,12 +237,46 @@ export default {
         this.registering = false;
       }
     },
-    forgetPassword() {
-      uni.showModal({
-        title: '忘记密码',
-        content: '当前版本暂未接入自助找回密码，请联系管理员或客服为您重置密码。',
-        showCancel: false
-      });
+    openResetPasswordPopup() {
+      this.$refs.resetPasswordPopup?.open();
+    },
+    closeResetPasswordPopup() {
+      this.$refs.resetPasswordPopup?.close();
+    },
+    async handleResetPassword() {
+      if (this.resettingPassword) return;
+      const { userPhone, newPassword, checkPassword } = this.resetPasswordForm;
+      if (!userPhone) {
+        return uni.showToast({ title: '请输入注册手机号', icon: 'none' });
+      }
+      if (!newPassword || newPassword.length < 6) {
+        return uni.showToast({ title: '新密码至少 6 位', icon: 'none' });
+      }
+      if (newPassword !== checkPassword) {
+        return uni.showToast({ title: '两次输入的新密码不一致', icon: 'none' });
+      }
+      this.resettingPassword = true;
+      try {
+        await userApi.resetPassword({
+          userPhone,
+          newPassword,
+          checkPassword
+        });
+        this.form.userPhone = userPhone;
+        this.form.userPassword = newPassword;
+        this.loginType = 'phone';
+        uni.showToast({ title: '密码已重置，请重新登录', icon: 'success' });
+        this.closeResetPasswordPopup();
+        this.resetPasswordForm = {
+          userPhone: '',
+          newPassword: '',
+          checkPassword: ''
+        };
+      } catch (error) {
+        uni.showToast({ title: error.message || '重置失败', icon: 'none' });
+      } finally {
+        this.resettingPassword = false;
+      }
     },
     async wechatLogin() {
       if (this.loading) return;
@@ -271,5 +332,32 @@ export default {
 
 .other-login {
   margin-top: $spacing-lg;
+}
+
+.reset-password-popup {
+  width: 620rpx;
+  max-width: calc(100vw - 80rpx);
+  padding: 36rpx 32rpx;
+  border-radius: 24rpx;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.reset-password-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 24rpx;
+  text-align: center;
+}
+
+.reset-password-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 12rpx;
+}
+
+.action-btn {
+  flex: 1;
 }
 </style>

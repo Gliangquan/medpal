@@ -23,6 +23,7 @@ import ContentView from '../views/admin/ContentView.vue';
 import SystemSettingsView from '../views/admin/SystemSettingsView.vue';
 import CompanionCertificationView from '../views/admin/CompanionCertificationView.vue';
 import FileManagerView from '../views/admin/FileManagerView.vue';
+import NotificationAdminView from '../views/admin/NotificationAdminView.vue';
 
 
 
@@ -58,6 +59,7 @@ const routes = [
       { path: 'content', component: ContentView, meta: { requiresAuth: true } },
       { path: 'files', component: FileManagerView, meta: { requiresAuth: true } },
       { path: 'settings', component: SystemSettingsView, meta: { requiresAuth: true } },
+      { path: 'notifications', component: NotificationAdminView, meta: { requiresAuth: true } },
     ],
   },
 ];

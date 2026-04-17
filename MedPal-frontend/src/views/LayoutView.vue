@@ -37,7 +37,7 @@
           </template>
           <span>个人中心</span>
         </a-menu-item>
-        <a-menu-item key="/chat" class="menu-item">
+        <a-menu-item v-if="!isAdmin" key="/chat" class="menu-item">
           <template #icon>
             <message-outlined />
           </template>
@@ -118,6 +118,14 @@
               <file-outlined />
             </template>
             <span>内容管理</span>
+          </a-menu-item>
+
+          <!-- 通知中心 -->
+          <a-menu-item key="/admin/notifications" class="menu-item">
+            <template #icon>
+              <message-outlined />
+            </template>
+            <span>通知中心</span>
           </a-menu-item>
 
           <!-- 文件管理 -->

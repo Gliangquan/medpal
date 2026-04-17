@@ -17,6 +17,13 @@ export interface UserRegisterRequest {
   userPhone: string;
 }
 
+// 重置密码请求
+export interface UserResetPasswordRequest {
+  userPhone: string;
+  newPassword: string;
+  checkPassword: string;
+}
+
 // 用户信息
 export interface User {
   id: number;
@@ -143,6 +150,13 @@ export function userRegister(data: UserRegisterRequest): Promise<BaseResponse<nu
  */
 export function userLogout(): Promise<BaseResponse<boolean>> {
   return request.post('/user/logout') as Promise<BaseResponse<boolean>>;
+}
+
+/**
+ * 重置密码
+ */
+export function resetPassword(data: UserResetPasswordRequest): Promise<BaseResponse<boolean>> {
+  return request.post('/user/reset-password', data) as Promise<BaseResponse<boolean>>;
 }
 
 /**

@@ -36,6 +36,13 @@
         </uni-list>
       </template>
 
+      <template v-if="isCompanionUser">
+        <uni-section title="患者联系信息" class="section"></uni-section>
+        <uni-list :border="false">
+          <uni-list-item title="联系电话" :right-text="patientContactPhone"></uni-list-item>
+        </uni-list>
+      </template>
+
       <!-- 服务详情 -->
       <uni-section title="服务详情" class="section"></uni-section>
       <uni-list :border="false">
@@ -222,6 +229,9 @@ export default {
     patientContactText() {
       return this.order?.companionId ? '联系陪诊员' : '待接单后可联系陪诊员';
     },
+    patientContactPhone() {
+      return this.order?.patientPhone || this.extractPatientPhone(this.order?.specificNeeds) || '平台内联系';
+    },
     chatPeerId() {
       if (!this.order) return null;
       return this.isCompanionUser ? this.order.userId : this.order.companionId;
@@ -355,6 +365,11 @@ export default {
         doctorName: doctorName || order?.doctorName || ''
       };
     },
+    extractPatientPhone(specificNeeds) {
+      if (!specificNeeds || typeof specificNeeds !== 'string') return '';
+      const matched = specificNeeds.match(/联系手机号：([^；\s]+)/);
+      return matched?.[1] || '';
+    },
     async loadDetail() {
       try {
         const rawOrder = await orderApi.get(this.orderId);
@@ -378,6 +393,7 @@ export default {
           doctorName: order.doctorName || '未指定医生',
           companionName: order.companionName || null,
           companionPhone: order.companionPhone || null,
+          patientPhone: order.patientPhone || this.extractPatientPhone(order.specificNeeds) || null,
           duration: order.duration || '-',
           durationText: this.normalizeDuration(order.duration),
           specificNeeds: order.specificNeeds || '无',

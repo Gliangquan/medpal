@@ -86,6 +86,23 @@ public class PaymentController {
     }
 
     /**
+     * 分页查询支付记录（管理员）
+     */
+    @GetMapping("/list")
+    public BaseResponse<com.baomidou.mybatisplus.core.metadata.IPage<PaymentVO>> listPayments(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String paymentStatus,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser == null || !"admin".equals(loginUser.getUserRole())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "仅管理员可查看支付记录");
+        }
+        return ResultUtils.success(paymentService.listPayments(current, size, keyword, paymentStatus));
+    }
+
+    /**
      * 查询支付状态
      *
      * @param orderId 订单ID

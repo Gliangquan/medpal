@@ -22,6 +22,13 @@ const userApi = {
       data: payload
     });
   },
+  resetPassword(payload) {
+    return request({
+      url: '/user/reset-password',
+      method: 'POST',
+      data: payload
+    });
+  },
   fetchCurrentUser() {
     return request({
       url: '/user/get/login',

@@ -1,5 +1,6 @@
 package com.jcen.medpal.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.jcen.medpal.model.entity.Payment;
 import com.jcen.medpal.model.vo.PaymentVO;
@@ -46,6 +47,17 @@ public interface PaymentService extends IService<Payment> {
      * @return 支付记录VO
      */
     PaymentVO getPaymentStatus(Long orderId);
+
+    /**
+     * 分页查询支付记录（管理员）
+     *
+     * @param current 当前页
+     * @param size 每页大小
+     * @param keyword 关键字（支付号/订单号）
+     * @param paymentStatus 支付状态
+     * @return 分页支付记录
+     */
+    IPage<PaymentVO> listPayments(long current, long size, String keyword, String paymentStatus);
 
     /**
      * 根据支付ID查询支付记录

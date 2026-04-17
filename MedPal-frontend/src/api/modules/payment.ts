@@ -6,9 +6,11 @@ export type PaymentChannel = 'mock' | 'alipay' | 'wechat';
 
 // 支付状态
 export type PaymentStatus = 
-  | 'pending'    // 待支付
+  | 'unpaid'     // 未支付
+  | 'pending'    // 待支付（兼容旧值）
   | 'processing' // 处理中
-  | 'success'    // 支付成功
+  | 'paid'       // 已支付
+  | 'success'    // 支付成功（兼容旧值）
   | 'failed'     // 支付失败
   | 'cancelled'  // 已取消
   | 'refunded';  // 已退款
@@ -16,24 +18,25 @@ export type PaymentStatus =
 // 支付记录
 export interface Payment {
   id: number;
-  paymentNo: string;      // 支付单号
-  orderId: number;        // 订单ID
-  userId: number;         // 用户ID
-  amount: number;         // 支付金额
-  channel: PaymentChannel;// 支付渠道
-  status: PaymentStatus;  // 支付状态
-  description?: string;   // 支付描述
-  payTime?: string;       // 支付时间
-  thirdPartyNo?: string;  // 第三方支付单号
-  voucherUrl?: string;    // 支付凭证URL
+  paymentNo: string;
+  orderId: number;
+  orderNo?: string;
+  userId: number;
+  amount: number;
+  paymentChannel?: PaymentChannel | string;
+  paymentStatus: PaymentStatus;
+  paymentStatusText?: string;
+  transactionId?: string;
+  description?: string;
+  paidTime?: string;
+  expireTime?: string;
+  voucherNo?: string;
   createTime: string;
-  updateTime: string;
+  updateTime?: string;
 }
 
 // 支付 VO
-export interface PaymentVO extends Payment {
-  orderNo?: string;       // 订单编号
-}
+export interface PaymentVO extends Payment {}
 
 /**
  * 创建支付订单
@@ -95,9 +98,11 @@ export function getPaymentVoucher(paymentId: number): Promise<BaseResponse<Payme
  */
 export function listPayments(
   current: number = 1,
-  size: number = 10
+  size: number = 10,
+  keyword?: string,
+  paymentStatus?: PaymentStatus
 ): Promise<BaseResponse<PageData<PaymentVO>>> {
   return request.get('/payment/list', {
-    params: { current, size },
+    params: { current, size, keyword, paymentStatus },
   }) as Promise<BaseResponse<PageData<PaymentVO>>>;
 }

@@ -24,6 +24,7 @@ public class OrderDetailVO {
     private String doctorName;
     private String companionName;
     private String companionPhone;
+    private String patientPhone;
     
     private LocalDateTime appointmentDate;
     private String duration;

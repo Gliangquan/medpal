@@ -147,6 +147,7 @@ create table appointment_order(
     payment_status varchar(50) default 'unpaid' comment '支付状态：unpaid/paid/refunded',
     cancel_reason varchar(512) null comment '取消原因',
     cancel_time datetime null comment '取消时间',
+    completion_requested_time datetime null comment '完成申请时间',
     create_time datetime default CURRENT_TIMESTAMP not null comment '创建时间',
     update_time datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     is_delete tinyint default 0 not null comment '是否删除',
@@ -213,6 +214,32 @@ create table service_record(
     index idx_order_id (order_id),
     index idx_companion_id (companion_id)
 ) comment '服务记录表' collate = utf8mb4_unicode_ci;
+
+-- ==================== 病历表 ====================
+
+drop table if exists medical_record;
+create table medical_record(
+    id bigint auto_increment comment 'id' primary key,
+    user_id bigint not null comment '用户id',
+    record_no varchar(64) not null unique comment '病历编号',
+    hospital_name varchar(256) null comment '医院名称',
+    department_name varchar(256) null comment '科室名称',
+    doctor_name varchar(256) null comment '医生姓名',
+    visit_date datetime null comment '就诊日期',
+    diagnosis text null comment '诊断结果',
+    symptoms text null comment '症状描述',
+    treatment text null comment '治疗方案',
+    prescription text null comment '处方信息',
+    check_results text null comment '检查结果',
+    doctor_advice text null comment '医生建议',
+    attachments text null comment '附件地址（逗号分隔或 JSON）',
+    create_time datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    is_delete tinyint default 0 not null comment '是否删除',
+    index idx_user_id (user_id),
+    index idx_visit_date (visit_date),
+    index idx_create_time (create_time)
+) comment '电子病历表' collate = utf8mb4_unicode_ci;
 
 -- ==================== 内容管理表 ====================
 

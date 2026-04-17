@@ -257,6 +257,36 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> implement
         return loginUserVO;
     }
 
+    @Override
+    public boolean resetPasswordByPhone(String userPhone, String newPassword, String checkPassword) {
+        if (StringUtils.isAnyBlank(userPhone, newPassword, checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "手机号和新密码不能为空");
+        }
+        if (userPhone.length() != 11) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "手机号格式错误");
+        }
+        if (newPassword.length() < 6 || checkPassword.length() < 6) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "新密码长度不能小于 6 位");
+        }
+        if (!StringUtils.equals(newPassword, checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的新密码不一致");
+        }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_phone", userPhone);
+        User user = this.baseMapper.selectOne(queryWrapper);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "该手机号未注册");
+        }
+        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + newPassword).getBytes());
+        UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", user.getId()).set("user_password", encryptPassword);
+        boolean updated = this.update(updateWrapper);
+        if (!updated) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "密码重置失败");
+        }
+        return true;
+    }
+
     /**
      * 获取当前登录用户
      *
