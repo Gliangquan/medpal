@@ -9,5 +9,5 @@ public interface EmergencyHelpService extends IService<EmergencyHelp> {
     
     boolean respondEmergencyHelp(Long id, Long responderId);
     
-    boolean resolveEmergencyHelp(Long id);
+    boolean resolveEmergencyHelp(Long id, Long resolverId, boolean isAdmin, String resolveNote);
 }

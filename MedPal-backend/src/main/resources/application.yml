@@ -38,7 +38,7 @@ mybatis-plus:
       id-type: auto
 
 server:
-  port: 9901
+  port: 19911
   servlet:
     context-path: /api
   compression:

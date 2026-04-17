@@ -8,7 +8,7 @@ const resolveWsUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}/api/ws`;
   }
-  return 'ws://127.0.0.1:9901/api/ws';
+  return 'ws://127.0.0.1:19911/api/ws';
 };
 
 const WS_URL = resolveWsUrl();

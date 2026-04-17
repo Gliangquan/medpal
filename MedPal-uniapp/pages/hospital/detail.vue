@@ -79,20 +79,31 @@ export default {
       this.hospitalId = options.id;
       await this.loadHospital(options.id);
       await this.loadDepartments(options.id);
+      if (options.departmentId) {
+        await this.selectDepartment(Number(options.departmentId));
+      }
     }
   },
   methods: {
     async loadHospital(id) {
       try {
-        this.hospital = await hospitalApi.detail(id);
+        const data = await hospitalApi.detail(id);
+        this.hospital = {
+          ...data,
+          hospitalLevel: data?.hospitalLevel || '综合医院',
+          rating: data?.rating || '4.8'
+        };
       } catch (error) {
         console.error('加载医院详情失败', error);
       }
     },
     async loadDepartments(hospitalId) {
       try {
-        const page = await departmentApi.list({ hospitalId, current: 1, size: 20 });
-        this.departments = page.records || [];
+        const page = await departmentApi.list({ hospitalId, current: 1, size: 100 });
+        this.departments = (page.records || []).map((item) => ({
+          ...item,
+          doctorCount: item.doctorCount || item.doctorNum || 0
+        }));
       } catch (error) {
         console.error('加载科室失败', error);
       }
@@ -101,8 +112,14 @@ export default {
       this.selectedDepartmentId = id;
       this.doctors = [];
       try {
-        const page = await doctorApi.list({ departmentId: id, current: 1, size: 20 });
-        this.doctors = page.records || [];
+        const page = await doctorApi.list({ departmentId: id, current: 1, size: 100 });
+        this.doctors = (page.records || []).map((item) => ({
+          ...item,
+          title: item.title || item.doctorTitle || '医生',
+          specialty: item.specialty || item.specialties || '暂无',
+          rating: item.rating || '4.8',
+          registrationFee: item.registrationFee || 20
+        }));
       } catch (error) {
         console.error('加载医生失败', error);
       }
@@ -119,7 +136,7 @@ export default {
         uni.showToast({ title: '仅患者可预约', icon: 'none' });
         return;
       }
-      uni.navigateTo({ url: `/pages/appointment/index?hospitalId=${this.hospitalId}&doctorId=${id}` });
+      uni.navigateTo({ url: `/pages/appointment/index?hospitalId=${this.hospitalId}&departmentId=${this.selectedDepartmentId || ''}&doctorId=${id}` });
     }
   }
 };

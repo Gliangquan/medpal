@@ -594,6 +594,10 @@ export default {
       uni.navigateTo({ url: '/pages/companion/certification' });
     },
     goEmergency() {
+      if (this.isCompanionRole) {
+        uni.navigateTo({ url: '/pages/emergency/list' });
+        return;
+      }
       uni.navigateTo({ url: '/pages/emergency/index' });
     },
     goNotification() {

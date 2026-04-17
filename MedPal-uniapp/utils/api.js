@@ -29,6 +29,13 @@ const userApi = {
       data: payload
     });
   },
+  changePassword(payload) {
+    return request({
+      url: '/user/change-password',
+      method: 'POST',
+      data: payload
+    });
+  },
   fetchCurrentUser() {
     return request({
       url: '/user/get/login',
@@ -269,6 +276,32 @@ const emergencyApi = {
       url: '/emergency/create',
       method: 'POST',
       data: payload
+    });
+  },
+  list(params) {
+    return request({
+      url: '/emergency/list',
+      method: 'GET',
+      params
+    });
+  },
+  detail(id) {
+    return request({
+      url: `/emergency/${id}`,
+      method: 'GET'
+    });
+  },
+  respond(id) {
+    return request({
+      url: `/emergency/respond/${id}`,
+      method: 'POST'
+    });
+  },
+  resolve(id, resolveNote) {
+    return request({
+      url: `/emergency/resolve/${id}`,
+      method: 'POST',
+      params: { resolveNote }
     });
   }
 };

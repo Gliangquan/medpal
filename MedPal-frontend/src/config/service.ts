@@ -1,6 +1,6 @@
 const DEFAULT_SERVICE_ORIGIN = typeof window !== 'undefined'
   ? window.location.origin
-  : 'http://localhost:9901';
+  : 'http://localhost:19911';
 
 const envServiceOrigin = import.meta.env.VITE_SERVICE_ORIGIN;
 const rawServiceOrigin = typeof envServiceOrigin === 'string' && envServiceOrigin.trim()

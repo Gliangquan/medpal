@@ -155,7 +155,7 @@ export default {
           averageScore: Math.round(averageScore * 10) / 10,
           evaluationText: this.evaluationText,
           evaluationImages: this.images.length ? this.images.join(',') : null,
-          status: 'pending'
+          status: 'published'
         });
         uni.showToast({ title: '评价提交成功', icon: 'success' });
         setTimeout(() => {

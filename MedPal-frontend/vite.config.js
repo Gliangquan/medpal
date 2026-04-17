@@ -9,15 +9,16 @@ export default defineConfig({
     Buffer: 'window.Buffer',
   },
   server: {
-    port: 9991,
+    host: '0.0.0.0',
+    port: 19912,
     proxy: {
       '/api': {
-        target: 'http://localhost:9901',
+        target: 'http://localhost:19911',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
       '/ws': {
-        target: 'http://localhost:9901',
+        target: 'http://localhost:19911',
         ws: true,
         changeOrigin: true,
       },

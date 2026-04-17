@@ -11,10 +11,12 @@ import com.jcen.medpal.model.entity.AppointmentOrder;
 import com.jcen.medpal.model.entity.Department;
 import com.jcen.medpal.model.entity.Doctor;
 import com.jcen.medpal.model.entity.Hospital;
+import com.jcen.medpal.model.entity.MedicalRecord;
 import com.jcen.medpal.model.entity.User;
 import com.jcen.medpal.model.vo.OrderDetailVO;
 import com.jcen.medpal.service.AppointmentOrderService;
 import com.jcen.medpal.service.EvaluationService;
+import com.jcen.medpal.service.MedicalRecordService;
 import com.jcen.medpal.service.NotificationService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,9 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
 
     @Autowired
     private EvaluationService evaluationService;
+
+    @Autowired
+    private MedicalRecordService medicalRecordService;
 
     @Autowired
     private NotificationService notificationService;
@@ -178,6 +183,7 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
         if (!syncResult) {
             throw new IllegalStateException("订单完成后联动更新失败");
         }
+        ensureMedicalRecord(order);
         if (order.getCompanionId() != null) {
             notificationService.createNotification(
                     order.getCompanionId(),
@@ -221,11 +227,33 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
 
     @Override
     public AppointmentOrder saveDraft(AppointmentOrder order) {
+        LocalDateTime now = LocalDateTime.now();
+        if (order.getId() != null) {
+            AppointmentOrder existing = this.getById(order.getId());
+            if (existing != null) {
+                existing.setHospitalId(order.getHospitalId());
+                existing.setDepartmentId(order.getDepartmentId());
+                existing.setDoctorId(order.getDoctorId());
+                existing.setCompanionId(order.getCompanionId());
+                existing.setAppointmentDate(order.getAppointmentDate());
+                existing.setDuration(order.getDuration());
+                existing.setSpecificNeeds(order.getSpecificNeeds());
+                existing.setTotalPrice(order.getTotalPrice());
+                existing.setServiceFee(order.getServiceFee());
+                existing.setExtraFee(order.getExtraFee());
+                existing.setPlatformFee(order.getPlatformFee());
+                existing.setOrderStatus("draft");
+                existing.setPaymentStatus("unpaid");
+                existing.setUpdateTime(now);
+                this.updateById(existing);
+                return existing;
+            }
+        }
         order.setOrderStatus("draft");
         order.setOrderNo(null);
         order.setPaymentStatus("unpaid");
-        order.setCreateTime(LocalDateTime.now());
-        order.setUpdateTime(LocalDateTime.now());
+        order.setCreateTime(now);
+        order.setUpdateTime(now);
         this.save(order);
         return order;
     }
@@ -315,6 +343,35 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
         return userMapper.updateById(companion) > 0;
     }
 
+    private void ensureMedicalRecord(AppointmentOrder order) {
+        if (order == null || order.getUserId() == null) {
+            return;
+        }
+        long existingCount = medicalRecordService.lambdaQuery()
+                .eq(MedicalRecord::getUserId, order.getUserId())
+                .eq(MedicalRecord::getVisitDate, order.getAppointmentDate())
+                .eq(MedicalRecord::getHospitalName, getHospitalName(order.getHospitalId()))
+                .eq(MedicalRecord::getDepartmentName, getDepartmentName(order.getDepartmentId()))
+                .eq(MedicalRecord::getDoctorName, getDoctorName(order.getDoctorId()))
+                .count();
+        if (existingCount > 0) {
+            return;
+        }
+        MedicalRecord record = new MedicalRecord();
+        record.setUserId(order.getUserId());
+        record.setHospitalName(getHospitalName(order.getHospitalId()));
+        record.setDepartmentName(getDepartmentName(order.getDepartmentId()));
+        record.setDoctorName(getDoctorName(order.getDoctorId()));
+        record.setVisitDate(order.getAppointmentDate());
+        record.setSymptoms(extractSection(order.getSpecificNeeds(), "补充说明："));
+        record.setDiagnosis("完成一次陪诊服务，待医生进一步补充诊断");
+        record.setTreatment("已完成陪诊、挂号/问诊/检查等基础陪同服务");
+        record.setDoctorAdvice("请根据医生建议按时复诊，并妥善保存检查报告与处方信息");
+        record.setCheckResults(extractSection(order.getSpecificNeeds(), "额外需求："));
+        record.setPrescription("");
+        medicalRecordService.createMedicalRecord(record);
+    }
+
     private User getCompanionUser(Long companionId) {
         if (companionId == null) {
             return null;
@@ -340,6 +397,44 @@ public class AppointmentOrderServiceImpl extends ServiceImpl<AppointmentOrderMap
             income = BigDecimal.ZERO;
         }
         return income.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String getHospitalName(Long hospitalId) {
+        if (hospitalId == null) {
+            return "未填写医院";
+        }
+        Hospital hospital = hospitalMapper.selectById(hospitalId);
+        return hospital != null && hospital.getHospitalName() != null ? hospital.getHospitalName() : "未填写医院";
+    }
+
+    private String getDepartmentName(Long departmentId) {
+        if (departmentId == null) {
+            return "未填写科室";
+        }
+        Department department = departmentMapper.selectById(departmentId);
+        return department != null && department.getDepartmentName() != null ? department.getDepartmentName() : "未填写科室";
+    }
+
+    private String getDoctorName(Long doctorId) {
+        if (doctorId == null) {
+            return "未填写医生";
+        }
+        Doctor doctor = doctorMapper.selectById(doctorId);
+        return doctor != null && doctor.getDoctorName() != null ? doctor.getDoctorName() : "未填写医生";
+    }
+
+    private String extractSection(String text, String prefix) {
+        if (text == null || prefix == null) {
+            return "";
+        }
+        String[] parts = text.split("；");
+        for (String part : parts) {
+            String trimmed = part == null ? "" : part.trim();
+            if (trimmed.startsWith(prefix)) {
+                return trimmed.substring(prefix.length()).trim();
+            }
+        }
+        return "";
     }
 
     private BigDecimal nullToZero(BigDecimal value) {

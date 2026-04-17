@@ -6,6 +6,17 @@
       <text class="subtitle">遇到紧急情况请立即填写并提交</text>
     </view>
 
+    <view v-if="latestHelp" class="card latest-card">
+      <view class="section-title">最近一次求助进度</view>
+      <view class="progress-row">
+        <text class="progress-status" :class="latestHelp.status">{{ latestHelp.statusText }}</text>
+        <text class="progress-time">{{ latestHelp.createTimeText }}</text>
+      </view>
+      <text class="progress-content">{{ latestHelp.content }}</text>
+      <text v-if="latestHelp.responderText" class="progress-helper">{{ latestHelp.responderText }}</text>
+      <text v-if="latestHelp.resolveNote" class="progress-helper">处理说明：{{ latestHelp.resolveNote }}</text>
+    </view>
+
     <view class="card">
       <view class="section-title">当前位置</view>
       <view class="location" @tap="getLocation">
@@ -48,12 +59,19 @@
     </view>
 
     <button class="btn-danger" :disabled="!content" @tap="submit">立即求助</button>
-    <text class="hint">点击后将通知附近的工作人员</text>
+    <text class="hint">点击后将通知可处理的陪诊员，并在上方显示响应进度</text>
   </view>
 </template>
 
 <script>
 import { emergencyApi } from '@/utils/api.js';
+import { formatDateTime } from '@/utils/format.js';
+
+const STATUS_TEXT = {
+  pending: '已提交，等待响应',
+  responded: '已有陪诊员响应',
+  resolved: '本次求助已处理'
+};
 
 export default {
   data() {
@@ -64,13 +82,39 @@ export default {
       latitude: null,
       longitude: null,
       selectedTag: '',
+      latestHelp: null,
       quickTags: ['身体不适', '突发疾病', '跌倒受伤', '药物反应', '心理紧急', '其他紧急']
     };
   },
   onLoad() {
     this.getLocation();
+    this.loadLatestHelp();
+  },
+  onShow() {
+    this.loadLatestHelp();
   },
   methods: {
+    async loadLatestHelp() {
+      const user = uni.getStorageSync('userInfo');
+      if (!user?.id) return;
+      try {
+        const page = await emergencyApi.list({ current: 1, size: 5, userId: user.id });
+        const list = page?.records || [];
+        if (!list.length) {
+          this.latestHelp = null;
+          return;
+        }
+        const latest = list[0];
+        this.latestHelp = {
+          ...latest,
+          statusText: STATUS_TEXT[latest.status] || '处理中',
+          createTimeText: formatDateTime(latest.createTime) || '刚刚',
+          responderText: latest.responderId ? `已有陪诊员接收（陪诊员 #${latest.responderId}）` : ''
+        };
+      } catch (error) {
+        this.latestHelp = null;
+      }
+    },
     getLocation() {
       uni.getLocation({
         type: 'gcj02',
@@ -104,7 +148,6 @@ export default {
       }
       try {
         await emergencyApi.create({
-          userId: user.id,
           content: this.content.trim(),
           location: this.locationName || '',
           latitude: this.latitude,
@@ -113,14 +156,14 @@ export default {
         });
         uni.showModal({
           title: '求助已提交',
-          content: '工作人员会尽快联系您，如情况紧急请直接拨打 120。',
+          content: '系统已通知可处理的陪诊员，你可返回本页查看最新响应进度；如情况紧急请直接拨打 120。',
           showCancel: false,
-          success: () => {
+          success: async () => {
             this.content = '';
             this.selectedTag = '';
             this.latitude = null;
             this.longitude = null;
-            uni.switchTab({ url: '/pages/index/index' });
+            await this.loadLatestHelp();
           }
         });
       } catch (error) {
@@ -172,6 +215,50 @@ export default {
   padding: 18rpx;
   margin-bottom: 16rpx;
   box-shadow: 0 10rpx 24rpx rgba(200, 59, 59, 0.08);
+}
+
+.latest-card {
+  border: 1rpx solid rgba(255, 92, 92, 0.15);
+  background: #fffafa;
+}
+
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-status {
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.progress-status.pending {
+  color: #ff8a00;
+}
+
+.progress-status.responded {
+  color: #2f65f9;
+}
+
+.progress-status.resolved {
+  color: #6f7a8d;
+}
+
+.progress-time,
+.progress-helper {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #8b5c5c;
+}
+
+.progress-content {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #4f5564;
+  line-height: 1.6;
 }
 
 .section-title {

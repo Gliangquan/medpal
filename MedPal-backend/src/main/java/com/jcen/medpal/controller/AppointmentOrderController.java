@@ -55,6 +55,12 @@ public class AppointmentOrderController {
             if (!"patient".equals(loginUser.getUserRole()) && !"user".equals(loginUser.getUserRole())) {
                 return ResultUtils.error(40300, "仅患者可保存草稿");
             }
+            if (order.getId() != null) {
+                AppointmentOrder existing = appointmentOrderService.getById(order.getId());
+                if (existing == null || existing.getUserId() == null || !existing.getUserId().equals(loginUser.getId())) {
+                    return ResultUtils.error(40300, "无权更新该草稿");
+                }
+            }
             order.setUserId(loginUser.getId());
             AppointmentOrder result = appointmentOrderService.saveDraft(order);
             return ResultUtils.success(result);
@@ -124,6 +130,7 @@ public class AppointmentOrderController {
                             @RequestParam(defaultValue = "10") long size,
                             @RequestParam(required = false) Long userId,
                             @RequestParam(required = false) String orderStatus,
+                            @RequestParam(required = false) String keyword,
                             HttpServletRequest request) {
         try {
             User loginUser = userService.getLoginUser(request);
@@ -135,9 +142,11 @@ public class AppointmentOrderController {
                 return ResultUtils.error(40300, "无权限查看该用户订单");
             }
             Page<AppointmentOrder> page = new Page<>(current, size);
+            String keywordTrimmed = StringUtils.trimToNull(keyword);
             IPage<AppointmentOrder> result = appointmentOrderService.lambdaQuery()
                     .eq(queryUserId != null, AppointmentOrder::getUserId, queryUserId)
                     .eq(orderStatus != null, AppointmentOrder::getOrderStatus, orderStatus)
+                    .and(keywordTrimmed != null, wrapper -> wrapper.like(AppointmentOrder::getOrderNo, keywordTrimmed))
                     .orderByDesc(AppointmentOrder::getCreateTime)
                     .page(page);
             return ResultUtils.success(result);

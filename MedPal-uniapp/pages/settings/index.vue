@@ -57,12 +57,22 @@
       </view>
     </view>
 
+    <uni-section title="账户安全" type="line"></uni-section>
+    <view class="card">
+      <view class="password-form">
+        <uni-easyinput v-model="passwordForm.oldPassword" type="password" placeholder="请输入当前密码" />
+        <uni-easyinput v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码（至少6位）" />
+        <uni-easyinput v-model="passwordForm.checkPassword" type="password" placeholder="请再次输入新密码" />
+        <button class="btn-primary-inline" @tap="submitPasswordChange">修改密码</button>
+      </view>
+    </view>
+
     <button class="btn-ghost" @tap="clearCache">清除本地缓存</button>
   </view>
 </template>
 
 <script>
-import { settingsApi } from '@/utils/api.js';
+import { settingsApi, userApi } from '@/utils/api.js';
 import { isPatientRole as checkPatientRole } from '@/utils/permission.js';
 
 export default {
@@ -79,6 +89,11 @@ export default {
         medicalRecordVisible: false,
         profileVisible: true,
         chatHistorySaveDays: 30
+      },
+      passwordForm: {
+        oldPassword: '',
+        newPassword: '',
+        checkPassword: ''
       }
     };
   },
@@ -150,6 +165,32 @@ export default {
       this.privacySettings.chatHistorySaveDays = value;
       await this.updatePrivacy('chatHistorySaveDays', { detail: { value } });
     },
+    async submitPasswordChange() {
+      const { oldPassword, newPassword, checkPassword } = this.passwordForm;
+      if (!oldPassword || !newPassword || !checkPassword) {
+        uni.showToast({ title: '请完整填写密码信息', icon: 'none' });
+        return;
+      }
+      if (newPassword.length < 6) {
+        uni.showToast({ title: '新密码至少 6 位', icon: 'none' });
+        return;
+      }
+      if (newPassword !== checkPassword) {
+        uni.showToast({ title: '两次输入的新密码不一致', icon: 'none' });
+        return;
+      }
+      try {
+        await userApi.changePassword({ oldPassword, newPassword, checkPassword });
+        this.passwordForm = {
+          oldPassword: '',
+          newPassword: '',
+          checkPassword: ''
+        };
+        uni.showToast({ title: '密码修改成功', icon: 'success' });
+      } catch (error) {
+        uni.showToast({ title: error.message || '修改密码失败', icon: 'none' });
+      }
+    },
     clearCache() {
       uni.showModal({
         title: '清除缓存',
@@ -212,6 +253,20 @@ export default {
   font-size: 20rpx;
   color: #9aa4b8;
   margin-top: 6rpx;
+}
+
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.btn-primary-inline {
+  background: #2f65f9;
+  color: #ffffff;
+  border-radius: 999rpx;
+  padding: 14rpx 0;
+  font-size: 24rpx;
 }
 
 .btn-ghost {

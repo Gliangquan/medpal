@@ -9,6 +9,8 @@ public interface MedicalRecordService extends IService<MedicalRecord> {
     MedicalRecord createMedicalRecord(MedicalRecord record);
     
     IPage<MedicalRecord> getUserMedicalRecords(Long userId, long current, long size);
+
+    boolean hasAccessibleOrderRelation(Long userId, Long companionId);
     
     String generateRecordNo();
 }

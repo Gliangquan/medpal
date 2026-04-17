@@ -85,6 +85,17 @@ public interface UserService extends IService<User> {
     boolean resetPasswordByPhone(String userPhone, String newPassword, String checkPassword);
 
     /**
+     * 登录后修改密码
+     *
+     * @param userId 用户ID
+     * @param oldPassword 原密码
+     * @param newPassword 新密码
+     * @param checkPassword 确认密码
+     * @return 是否成功
+     */
+    boolean changePassword(Long userId, String oldPassword, String newPassword, String checkPassword);
+
+    /**
      * 获取当前登录用户
      *
      * @param request

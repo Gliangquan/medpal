@@ -54,21 +54,54 @@ public class EmergencyHelpServiceImpl extends ServiceImpl<EmergencyHelpMapper, E
         if (help == null) {
             return false;
         }
+        if ("resolved".equals(help.getStatus())) {
+            return false;
+        }
         help.setStatus("responded");
         help.setResponderId(responderId);
         help.setUpdateTime(LocalDateTime.now());
-        return this.updateById(help);
+        boolean updated = this.updateById(help);
+        if (updated && help.getUserId() != null) {
+            User responder = userMapper.selectById(responderId);
+            String responderName = responder != null && responder.getUserName() != null ? responder.getUserName() : "陪诊员";
+            notificationService.createNotification(
+                    help.getUserId(),
+                    "emergency",
+                    "紧急求助已有响应",
+                    responderName + " 已接收您的求助，请保持电话畅通并等待进一步联系",
+                    "emergency",
+                    help.getId());
+        }
+        return updated;
     }
     
     @Override
-    public boolean resolveEmergencyHelp(Long id) {
+    public boolean resolveEmergencyHelp(Long id, Long resolverId, boolean isAdmin, String resolveNote) {
         EmergencyHelp help = this.getById(id);
         if (help == null) {
             return false;
         }
+        if (!isAdmin) {
+            if (help.getResponderId() == null || !help.getResponderId().equals(resolverId)) {
+                return false;
+            }
+        }
         help.setStatus("resolved");
+        help.setResolveNote(resolveNote);
         help.setResolveTime(LocalDateTime.now());
         help.setUpdateTime(LocalDateTime.now());
-        return this.updateById(help);
+        boolean updated = this.updateById(help);
+        if (updated && help.getUserId() != null) {
+            notificationService.createNotification(
+                    help.getUserId(),
+                    "emergency",
+                    "紧急求助已处理",
+                    (resolveNote == null || resolveNote.trim().isEmpty())
+                            ? "您的紧急求助已处理完成"
+                            : "您的紧急求助已处理完成：" + resolveNote.trim(),
+                    "emergency",
+                    help.getId());
+        }
+        return updated;
     }
 }

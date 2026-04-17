@@ -6,6 +6,9 @@ export type OrderStatus =
   | 'draft'      // 草稿
   | 'pending'    // 待接单
   | 'accepted'   // 已接单
+  | 'confirmed'  // 已接单
+  | 'serving'    // 服务中
+  | 'completion_pending' // 待用户确认
   | 'rejected'   // 已拒单
   | 'in_progress'// 服务中
   | 'completed'  // 已完成
@@ -14,26 +17,29 @@ export type OrderStatus =
 // 订单信息
 export interface AppointmentOrder {
   id: number;
-  orderNo: string;        // 订单编号
-  userId: number;         // 用户ID
-  companionId?: number;   // 陪诊员ID
-  hospitalId: number;     // 医院ID
-  hospitalName?: string;  // 医院名称
-  department?: string;    // 科室
-  serviceType: string;    // 服务类型
-  appointmentDate: string;// 预约日期
-  appointmentTime?: string;// 预约时间段
-  patientName: string;    // 患者姓名
-  patientPhone: string;   // 患者电话
-  patientAge?: number;    // 患者年龄
-  patientGender?: 'male' | 'female';
-  symptomDesc?: string;   // 症状描述
-  requirements?: string;  // 特殊要求
-  address?: string;       // 接送地址
-  amount: number;         // 订单金额
+  orderNo: string;
+  userId: number;
+  companionId?: number;
+  hospitalId: number;
+  departmentId?: number;
+  doctorId?: number;
+  hospitalName?: string;
+  departmentName?: string;
+  doctorName?: string;
+  companionName?: string;
+  companionPhone?: string;
+  patientPhone?: string;
+  appointmentDate: string;
+  duration?: string;
+  specificNeeds?: string;
+  totalPrice?: number;
+  serviceFee?: number;
+  extraFee?: number;
+  platformFee?: number;
+  paymentStatus?: string;
   orderStatus: OrderStatus;
-  rejectReason?: string;  // 拒单/取消原因
-  remark?: string;        // 备注
+  cancelReason?: string;
+  completionRequestedTime?: string;
   createTime: string;
   updateTime: string;
 }
@@ -89,10 +95,11 @@ export function listOrders(
   current: number = 1,
   size: number = 10,
   userId?: number,
-  orderStatus?: OrderStatus
+  orderStatus?: OrderStatus,
+  keyword?: string
 ): Promise<BaseResponse<PageData<AppointmentOrder>>> {
   return request.get('/order/list', {
-    params: { current, size, userId, orderStatus },
+    params: { current, size, userId, orderStatus, keyword },
   }) as Promise<BaseResponse<PageData<AppointmentOrder>>>;
 }
 
@@ -150,6 +157,14 @@ export function rejectOrder(id: number, reason: string): Promise<BaseResponse<st
  */
 export function completeOrder(id: number): Promise<BaseResponse<string>> {
   return request.post(`/order/complete/${id}`) as Promise<BaseResponse<string>>;
+}
+
+/**
+ * 用户确认完成订单
+ * @param id 订单ID
+ */
+export function confirmCompleteOrder(id: number): Promise<BaseResponse<string>> {
+  return request.post(`/order/confirm-complete/${id}`) as Promise<BaseResponse<string>>;
 }
 
 /**

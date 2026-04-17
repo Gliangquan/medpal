@@ -218,13 +218,22 @@ export default {
         cancelText: '关闭',
         confirmText: notice.relatedType === 'order'
           ? '查看订单'
-          : (notice.relatedType === 'content' ? '查看内容' : '确定'),
+          : (notice.relatedType === 'content'
+            ? '查看内容'
+            : (notice.relatedType === 'emergency' ? '查看求助' : '确定')),
         success: (res) => {
           if (res.confirm && notice.relatedType === 'order' && notice.relatedId) {
             uni.navigateTo({ url: `/pages/order/detail?id=${notice.relatedId}` });
           }
           if (res.confirm && notice.relatedType === 'content' && notice.relatedId) {
             uni.navigateTo({ url: `/pages/content/detail?id=${notice.relatedId}` });
+          }
+          if (res.confirm && notice.relatedType === 'emergency' && notice.relatedId) {
+            const user = uni.getStorageSync('userInfo');
+            const targetUrl = user?.userRole === 'companion'
+              ? '/pages/emergency/list'
+              : `/pages/emergency/index?id=${notice.relatedId}`;
+            uni.navigateTo({ url: targetUrl });
           }
         }
       });

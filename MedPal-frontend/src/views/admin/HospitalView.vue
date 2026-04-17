@@ -33,8 +33,8 @@
         :row-key="record => record.id"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'level'">
-            <a-tag color="blue">{{ record.level || '-' }}</a-tag>
+          <template v-if="column.key === 'hospitalLevel'">
+            <a-tag color="blue">{{ record.hospitalLevel || record.level || '-' }}</a-tag>
           </template>
           <template v-else-if="column.key === 'action'">
             <a-space>
@@ -88,9 +88,10 @@ import { listHospitals, searchHospitals, createHospital, updateHospital, deleteH
 
 const columns = [
   { title: '医院名称', dataIndex: 'hospitalName', key: 'hospitalName', width: 200 },
-  { title: '医院等级', dataIndex: 'hospitalLevel', key: 'hospitalLevel', width: 100 },
+  { title: '医院等级', dataIndex: 'hospitalLevel', key: 'hospitalLevel', width: 120 },
   { title: '地址', dataIndex: 'address', key: 'address', width: 250 },
-  { title: '联系电话', dataIndex: 'phone', key: 'phone', width: 120 },
+  { title: '联系电话', dataIndex: 'phone', key: 'phone', width: 140 },
+  { title: '简介', dataIndex: 'introduction', key: 'introduction', width: 260, ellipsis: true },
   { title: '操作', key: 'action', width: 120, fixed: 'right' },
 ];
 
@@ -130,7 +131,11 @@ const fetchData = async () => {
     if (keyword) {
       const response = await searchHospitals(keyword);
       if (response.code === 0) {
-        tableData.value = response.data || [];
+        tableData.value = (response.data || []).map((item: any) => ({
+          ...item,
+          hospitalLevel: item.hospitalLevel || item.level || '',
+          introduction: item.introduction || item.description || ''
+        }));
         pagination.total = tableData.value.length;
       } else {
         message.error(response.message || '获取数据失败');
@@ -140,7 +145,11 @@ const fetchData = async () => {
 
     const response = await listHospitals(pagination.current, pagination.pageSize);
     if (response.code === 0) {
-      tableData.value = response.data.records || [];
+      tableData.value = (response.data.records || []).map((item: any) => ({
+        ...item,
+        hospitalLevel: item.hospitalLevel || item.level || '',
+        introduction: item.introduction || item.description || ''
+      }));
       pagination.total = response.data.total || 0;
     } else {
       message.error(response.message || '获取数据失败');

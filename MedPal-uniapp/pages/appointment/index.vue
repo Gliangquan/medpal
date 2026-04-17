@@ -141,7 +141,12 @@
 
         <view class="form-item">
           <text class="form-label">期望开始时间</text>
-          <uni-datetime-picker type="datetime" v-model="appointmentStartTime" />
+          <uni-datetime-picker
+            type="datetime"
+            v-model="appointmentStartTime"
+            :start="minAppointmentTime"
+            :end="maxAppointmentTime"
+          />
           <text class="form-hint">先选择开始时间，系统会根据陪诊时长自动计算结束时间</text>
         </view>
 
@@ -349,6 +354,18 @@ export default {
       const end = this.appointmentEndTime;
       if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
       return `${formatDateTime(start)} - ${formatDateTime(end)}`;
+    },
+    minAppointmentTime() {
+      const now = new Date();
+      now.setMinutes(0, 0, 0);
+      now.setHours(now.getHours() + 1);
+      return this.formatPickerDateTime(now);
+    },
+    maxAppointmentTime() {
+      const max = new Date();
+      max.setMonth(max.getMonth() + 3);
+      max.setHours(20, 0, 0, 0);
+      return this.formatPickerDateTime(max);
     }
   },
   async onLoad(options) {
@@ -362,6 +379,18 @@ export default {
       const hospital = this.hospitals.find((item) => item.id === Number(options.hospitalId));
       if (hospital) {
         await this.selectHospital(hospital);
+        if (options?.departmentId) {
+          const targetDepartment = this.departments.find((item) => Number(item.id) === Number(options.departmentId));
+          if (targetDepartment) {
+            this.selectDepartment(targetDepartment);
+          }
+        }
+        if (options?.doctorId) {
+          const targetDoctor = this.doctors.find((item) => Number(item.id) === Number(options.doctorId));
+          if (targetDoctor) {
+            this.selectDoctor(targetDoctor);
+          }
+        }
       }
     }
     if (options?.companionId) {
@@ -668,7 +697,10 @@ export default {
       if (!this.forceCompanionIdFromRoute) {
         this.selectedCompanion = draft.selectedCompanion || this.selectedCompanion;
       }
-      this.appointmentStartTime = draft.appointmentStartTime || '';
+      this.appointmentStartTime = draft.appointmentStartTime
+        || draft.appointmentDate
+        || (Array.isArray(draft.appointmentTimeRange) ? draft.appointmentTimeRange[0] : '')
+        || '';
       this.duration = draft.duration || this.duration;
       this.requirements = Array.isArray(draft.requirements) ? draft.requirements : [];
       this.customRequirements = Array.isArray(draft.customRequirements) ? draft.customRequirements : [];
@@ -700,6 +732,12 @@ export default {
         meetingPoint: this.meetingPoint,
         remarks: this.remarks
       });
+    },
+    formatPickerDateTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      const pad = (num) => String(num).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     },
     formatApiDateTime(value) {
       const date = new Date(value);
@@ -758,6 +796,7 @@ export default {
       const end = this.appointmentEndTime;
       const rangeText = start && end ? `${formatDateTime(start)} 至 ${formatDateTime(end)}` : '';
       return {
+        id: this.draftId || undefined,
         hospitalId: this.selectedHospital?.id || null,
         departmentId: this.selectedDepartment?.id || this.selectedDoctor?.departmentId || null,
         doctorId: this.selectedDoctor?.id || null,

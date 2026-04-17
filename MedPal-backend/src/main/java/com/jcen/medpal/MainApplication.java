@@ -20,7 +20,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class MainApplication {
     public static void main(String[] args) {
         SpringApplication.run(MainApplication.class, args);
-        log.info("接口文档访问：http://localhost:9901/api/doc.html#/home");
+        log.info("接口文档访问：http://localhost:19911/api/doc.html#/home");
     }
 
 }

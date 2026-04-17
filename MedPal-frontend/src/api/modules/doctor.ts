@@ -7,9 +7,12 @@ export interface Doctor {
   hospitalId: number;
   departmentId: number;
   doctorName: string;
-  title?: string; // 职称：主任医师、副主任医师 等
-  specialty?: string; // 专长
+  doctorTitle?: string;
+  title?: string; // 兼容旧字段
+  specialties?: string;
+  specialty?: string; // 兼容旧字段
   introduction?: string; // 简介
+  clinicTime?: string;
   photoUrl?: string; // 照片
   status: number; // 0-禁用，1-启用
   createTime: string;

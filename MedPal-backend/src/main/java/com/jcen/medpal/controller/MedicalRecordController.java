@@ -3,8 +3,10 @@ package com.jcen.medpal.controller;
 import com.jcen.medpal.common.ResultUtils;
 import com.jcen.medpal.model.entity.MedicalRecord;
 import com.jcen.medpal.model.entity.User;
+import com.jcen.medpal.model.entity.UserSettings;
 import com.jcen.medpal.service.MedicalRecordService;
 import com.jcen.medpal.service.UserService;
+import com.jcen.medpal.service.UserSettingsService;
 import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -18,6 +20,9 @@ public class MedicalRecordController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private UserSettingsService userSettingsService;
 
     @PostMapping("/create")
     public Object createMedicalRecord(@RequestBody MedicalRecord record) {
@@ -37,12 +42,24 @@ public class MedicalRecordController {
         try {
             User loginUser = userService.getLoginUser(request);
             boolean isAdmin = "admin".equals(loginUser.getUserRole());
+            boolean isCompanion = "companion".equals(loginUser.getUserRole());
             Long targetUserId = userId;
             if (!isAdmin) {
-                if (!"patient".equals(loginUser.getUserRole()) && !"user".equals(loginUser.getUserRole())) {
-                    return ResultUtils.error(40300, "仅患者可查看病历");
+                if ("patient".equals(loginUser.getUserRole()) || "user".equals(loginUser.getUserRole())) {
+                    targetUserId = loginUser.getId();
+                } else if (isCompanion) {
+                    if (targetUserId == null) {
+                        return ResultUtils.error(40000, "患者ID不能为空");
+                    }
+                    boolean hasOrderRelation = medicalRecordService.hasAccessibleOrderRelation(targetUserId, loginUser.getId());
+                    UserSettings settings = userSettingsService.getUserSettings(targetUserId);
+                    boolean visible = settings != null && Integer.valueOf(1).equals(settings.getMedicalRecordVisible());
+                    if (!hasOrderRelation || !visible) {
+                        return ResultUtils.error(40300, "患者未开放病历查看权限");
+                    }
+                } else {
+                    return ResultUtils.error(40300, "当前身份不可查看病历");
                 }
-                targetUserId = loginUser.getId();
             }
             if (targetUserId == null) {
                 return ResultUtils.error(40000, "用户ID不能为空");
@@ -64,8 +81,17 @@ public class MedicalRecordController {
             }
             boolean isAdmin = "admin".equals(loginUser.getUserRole());
             boolean isOwner = record.getUserId() != null && record.getUserId().equals(loginUser.getId());
+            boolean isCompanion = "companion".equals(loginUser.getUserRole());
             if (!isAdmin && !isOwner) {
-                return ResultUtils.error(40300, "无权限查看该病历");
+                if (!isCompanion) {
+                    return ResultUtils.error(40300, "无权限查看该病历");
+                }
+                boolean hasOrderRelation = medicalRecordService.hasAccessibleOrderRelation(record.getUserId(), loginUser.getId());
+                UserSettings settings = userSettingsService.getUserSettings(record.getUserId());
+                boolean visible = settings != null && Integer.valueOf(1).equals(settings.getMedicalRecordVisible());
+                if (!hasOrderRelation || !visible) {
+                    return ResultUtils.error(40300, "患者未开放病历查看权限");
+                }
             }
             return ResultUtils.success(record);
         } catch (Exception e) {

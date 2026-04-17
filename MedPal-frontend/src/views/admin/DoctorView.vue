@@ -230,7 +230,11 @@ const fetchData = async () => {
     );
 
     if (response.code === 0) {
-      tableData.value = response.data.records || [];
+      tableData.value = (response.data.records || []).map((item: any) => ({
+        ...item,
+        doctorTitle: item.doctorTitle || item.title || '',
+        specialties: item.specialties || item.specialty || ''
+      }));
       pagination.total = response.data.total || 0;
     } else {
       message.error(response.message || '获取数据失败');
@@ -257,7 +261,11 @@ const showAddModal = () => {
 
 const showEditModal = (record: any) => {
   isEdit.value = true;
-  Object.assign(formData, record);
+  Object.assign(formData, {
+    ...record,
+    doctorTitle: record.doctorTitle || record.title || '',
+    specialties: record.specialties || record.specialty || ''
+  });
   modalVisible.value = true;
 };
 

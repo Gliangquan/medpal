@@ -197,7 +197,6 @@ export default {
     },
     canComplete() {
       if (!this.order || this.order.paymentStatus !== 'paid') return false;
-      if (!['confirmed', 'serving'].includes(this.order.orderStatus)) return false;
       if (this.isPatientUser) {
         return this.order.orderStatus === 'completion_pending'
           && Number(this.order.userId) === Number(this.currentUser?.id);

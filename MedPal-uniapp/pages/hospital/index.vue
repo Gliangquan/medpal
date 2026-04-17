@@ -62,7 +62,10 @@ export default {
     filteredHospitals() {
       if (!this.keyword) return this.hospitals;
       const keyword = this.keyword.trim();
-      return this.hospitals.filter((item) => item.hospitalName.includes(keyword));
+      return this.hospitals.filter((item) => {
+        const haystack = `${item.hospitalName || ''} ${item.hospitalLevel || ''} ${item.address || ''} ${item.introduction || ''}`;
+        return haystack.includes(keyword);
+      });
     }
   },
   async onLoad(options) {
@@ -75,13 +78,25 @@ export default {
   methods: {
     async loadHospitals() {
       try {
-        const page = await hospitalApi.list({ current: 1, size: 50 });
-        this.hospitals = page.records || [];
+        const page = await hospitalApi.list({ current: 1, size: 100 });
+        this.hospitals = (page.records || []).map((item) => ({
+          ...item,
+          hospitalLevel: item.hospitalLevel || '综合医院',
+          rating: item.rating || '4.8',
+          distance: item.distance || '-',
+          bookingCount: item.bookingCount || 0,
+          departmentCount: item.departmentCount || 0,
+          introduction: item.introduction || ''
+        }));
       } catch (error) {
         console.error('加载医院列表失败', error);
       }
     },
-    applySearch() {},
+    applySearch() {
+      if (!this.filteredHospitals.length) {
+        uni.showToast({ title: '未找到匹配医院', icon: 'none' });
+      }
+    },
     clearSearch() {
       this.keyword = '';
     },

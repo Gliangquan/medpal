@@ -287,6 +287,41 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> implement
         return true;
     }
 
+    @Override
+    public boolean changePassword(Long userId, String oldPassword, String newPassword, String checkPassword) {
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在");
+        }
+        if (StringUtils.isAnyBlank(oldPassword, newPassword, checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码不能为空");
+        }
+        if (newPassword.length() < 6 || checkPassword.length() < 6) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "新密码长度不能小于 6 位");
+        }
+        if (!StringUtils.equals(newPassword, checkPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的新密码不一致");
+        }
+        if (StringUtils.equals(oldPassword, newPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "新密码不能与原密码相同");
+        }
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+        String oldEncryptPassword = DigestUtils.md5DigestAsHex((SALT + oldPassword).getBytes());
+        if (!StringUtils.equals(oldEncryptPassword, user.getUserPassword())) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "原密码错误");
+        }
+        String newEncryptPassword = DigestUtils.md5DigestAsHex((SALT + newPassword).getBytes());
+        UpdateWrapper<User> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id", userId).set("user_password", newEncryptPassword);
+        boolean updated = this.update(updateWrapper);
+        if (!updated) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "修改密码失败");
+        }
+        return true;
+    }
+
     /**
      * 获取当前登录用户
      *

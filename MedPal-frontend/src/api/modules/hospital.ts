@@ -8,9 +8,11 @@ export interface Hospital {
   hospitalCode?: string;
   address?: string;
   phone?: string;
-  level?: string; // 医院等级：三级甲等、二级甲等 等
+  hospitalLevel?: string;
+  level?: string; // 兼容旧字段
   type?: string; // 医院类型：综合医院、专科医院 等
-  description?: string;
+  introduction?: string;
+  description?: string; // 兼容旧字段
   logoUrl?: string;
   status: number; // 0-禁用，1-启用
   createTime: string;

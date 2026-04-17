@@ -19,6 +19,7 @@ import com.jcen.medpal.model.dto.user.UserLoginRequest;
 import com.jcen.medpal.model.dto.user.UserQueryRequest;
 import com.jcen.medpal.model.dto.user.UserRegisterRequest;
 import com.jcen.medpal.model.dto.user.UserResetPasswordRequest;
+import com.jcen.medpal.model.dto.user.UserChangePasswordRequest;
 import com.jcen.medpal.model.dto.user.UserCertificationAuditRequest;
 import com.jcen.medpal.model.dto.user.UserUpdateMyRequest;
 import com.jcen.medpal.model.dto.user.WeChatLoginRequest;
@@ -167,6 +168,24 @@ public class UserController {
                 userResetPasswordRequest.getUserPhone(),
                 userResetPasswordRequest.getNewPassword(),
                 userResetPasswordRequest.getCheckPassword());
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 登录后修改密码
+     */
+    @PostMapping("/change-password")
+    public BaseResponse<Boolean> changePassword(@RequestBody UserChangePasswordRequest userChangePasswordRequest,
+                                                HttpServletRequest request) {
+        if (userChangePasswordRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        boolean result = userService.changePassword(
+                loginUser.getId(),
+                userChangePasswordRequest.getOldPassword(),
+                userChangePasswordRequest.getNewPassword(),
+                userChangePasswordRequest.getCheckPassword());
         return ResultUtils.success(result);
     }
 

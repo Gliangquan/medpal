@@ -5,11 +5,11 @@ export default defineConfig({
   plugins: [uni()],
   server: {
     host: '0.0.0.0',
-    port: 8080,
+    port: 19913,
   },
   preview: {
     host: '0.0.0.0',
-    port: 8080,
+    port: 19913,
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),

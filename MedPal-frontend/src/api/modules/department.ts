@@ -7,7 +7,8 @@ export interface Department {
   hospitalId: number;
   departmentName: string;
   departmentCode?: string;
-  description?: string;
+  introduction?: string;
+  description?: string; // 兼容旧字段
   status: number; // 0-禁用，1-启用
   createTime: string;
   updateTime: string;

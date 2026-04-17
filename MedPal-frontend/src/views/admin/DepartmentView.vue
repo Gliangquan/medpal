@@ -79,8 +79,11 @@
         <a-form-item label="科室名称" required>
           <a-input v-model:value="formData.departmentName" placeholder="请输入科室名称" />
         </a-form-item>
+        <a-form-item label="科室代码">
+          <a-input v-model:value="formData.departmentCode" placeholder="请输入科室代码，如 CARD-01" />
+        </a-form-item>
         <a-form-item label="科室描述">
-          <a-textarea v-model:value="formData.description" placeholder="请输入科室描述" :rows="4" />
+          <a-textarea v-model:value="formData.introduction" placeholder="请输入科室描述" :rows="4" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -96,6 +99,7 @@ const columns = [
   { title: '科室名称', dataIndex: 'departmentName', key: 'departmentName', width: 150 },
   { title: '科室代码', dataIndex: 'departmentCode', key: 'departmentCode', width: 150 },
   { title: '医院', dataIndex: 'hospitalId', key: 'hospitalName', width: 150 },
+  { title: '科室描述', dataIndex: 'introduction', key: 'introduction', width: 260, ellipsis: true },
   { title: '操作', key: 'action', width: 120, fixed: 'right' },
 ];
 
@@ -120,7 +124,8 @@ const formData = reactive({
   id: null,
   departmentName: '',
   hospitalId: null,
-  description: '',
+  departmentCode: '',
+  introduction: '',
 });
 
 const getHospitalName = (hospitalId: any) => {
@@ -158,7 +163,10 @@ const fetchData = async () => {
     );
 
     if (response.code === 0) {
-      tableData.value = response.data.records || [];
+      tableData.value = (response.data.records || []).map((item: any) => ({
+        ...item,
+        introduction: item.introduction || item.description || ''
+      }));
       pagination.total = response.data.total || 0;
     } else {
       message.error(response.message || '获取数据失败');
@@ -175,13 +183,17 @@ const showAddModal = () => {
   formData.id = null;
   formData.departmentName = '';
   formData.hospitalId = null;
-  formData.description = '';
+  formData.departmentCode = '';
+  formData.introduction = '';
   modalVisible.value = true;
 };
 
 const showEditModal = (record: any) => {
   isEdit.value = true;
-  Object.assign(formData, record);
+  Object.assign(formData, {
+    ...record,
+    introduction: record.introduction || record.description || ''
+  });
   modalVisible.value = true;
 };
 

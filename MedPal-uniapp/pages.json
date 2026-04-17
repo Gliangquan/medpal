@@ -97,6 +97,12 @@
 			}
 		},
 		{
+			"path": "pages/emergency/list",
+			"style": {
+				"navigationBarTitleText": "紧急联动"
+			}
+		},
+		{
 			"path": "pages/hospital/index",
 			"style": {
 				"navigationBarTitleText": "医院列表"
