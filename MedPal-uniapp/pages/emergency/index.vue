@@ -117,16 +117,20 @@ export default {
         this.latestHelp = null;
       }
     },
-    getLocation() {
+    async getLocation() {
       if (this.locating) return;
       this.locating = true;
       this.locationError = '';
-      const handleFail = (message) => {
-        this.latitude = null;
-        this.longitude = null;
-        this.locationName = '';
-        this.locationError = message || '定位失败，请检查定位权限';
-        this.locating = false;
+      const handleFail = async (message) => {
+        try {
+          await this.fallbackLocateByIp(message);
+        } catch (error) {
+          this.latitude = null;
+          this.longitude = null;
+          this.locationName = '';
+          this.locationError = message || '定位失败，请检查定位权限';
+          this.locating = false;
+        }
       };
 
       if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -145,14 +149,14 @@ export default {
           (error) => {
             const code = error?.code;
             if (code === 1) {
-              handleFail('请在浏览器中允许定位权限');
+              handleFail('浏览器定位不可用，已切换为网络定位');
               return;
             }
             if (code === 2) {
-              handleFail('无法获取当前位置，请确认系统定位已开启');
+              handleFail('无法获取精确位置，已切换为网络定位');
               return;
             }
-            handleFail('定位超时，请稍后重试');
+            handleFail('定位超时，已切换为网络定位');
           },
           {
             enableHighAccuracy: true,
@@ -171,11 +175,30 @@ export default {
           this.locationName = `${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)}`;
           this.locating = false;
         },
-        fail: (error) => {
+        fail: async (error) => {
           console.error('getLocation failed', error);
-          handleFail('请授权位置权限以便快速定位');
+          await handleFail('请授权位置权限以便快速定位');
         }
       });
+    },
+    async fallbackLocateByIp(message) {
+      const result = await new Promise((resolve, reject) => {
+        uni.request({
+          url: 'https://ipwho.is/',
+          method: 'GET',
+          success: (res) => resolve(res.data),
+          fail: reject
+        });
+      });
+      if (!result || result.success === false || typeof result.latitude !== 'number' || typeof result.longitude !== 'number') {
+        throw new Error('fallback failed');
+      }
+      this.latitude = Number(result.latitude.toFixed(6));
+      this.longitude = Number(result.longitude.toFixed(6));
+      const parts = [result.city, result.region, result.country].filter(Boolean);
+      this.locationName = parts.length ? `${parts.join(' · ')}（网络定位）` : `${this.latitude.toFixed(4)}, ${this.longitude.toFixed(4)}（网络定位）`;
+      this.locationError = message || '已切换为网络定位';
+      this.locating = false;
     },
     selectTag(tag) {
       this.selectedTag = this.selectedTag === tag ? '' : tag;

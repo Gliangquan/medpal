@@ -20,7 +20,7 @@ public class UserCertificationAuditRequest implements Serializable {
     private String realNameStatus;
 
     /**
-     * 资质认证状态：approved / rejected
+     * 资质认证状态：approved / rejected / pending
      */
     private String qualificationStatus;
 

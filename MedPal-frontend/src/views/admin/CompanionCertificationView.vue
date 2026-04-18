@@ -118,6 +118,7 @@
               <a-radio-button value="approved">通过</a-radio-button>
               <a-radio-button value="rejected">驳回</a-radio-button>
             </a-radio-group>
+            <div style="margin-top: 8px; color: #999; font-size: 12px;">如陪诊员补充材料后重新提交，可重新设为待审核</div>
           </a-form-item>
         </a-form>
 
@@ -145,6 +146,7 @@
               <a-radio-button value="approved">通过</a-radio-button>
               <a-radio-button value="rejected">驳回</a-radio-button>
             </a-radio-group>
+            <div style="margin-top: 8px; color: #999; font-size: 12px;">被驳回后重新提交的申请，也会重新进入待审核列表</div>
           </a-form-item>
         </a-form>
       </template>

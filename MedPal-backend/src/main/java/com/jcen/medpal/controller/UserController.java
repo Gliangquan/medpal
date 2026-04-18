@@ -59,7 +59,7 @@ import static com.jcen.medpal.service.impl.UserServiceImpl.SALT;
 @Slf4j
 public class UserController {
 
-    private static final Set<String> CERT_AUDIT_STATUS_SET = new HashSet<>(Arrays.asList("approved", "rejected"));
+    private static final Set<String> CERT_AUDIT_STATUS_SET = new HashSet<>(Arrays.asList("approved", "rejected", "pending"));
 
     @Resource
     private UserService userService;
