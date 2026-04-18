@@ -8,11 +8,12 @@
           <view style="flex: 1;">
             <text class="text-base font-semibold text-primary">{{ displayName(companion) }}</text>
             <text class="text-sm text-muted" style="display: block; margin-top: 4rpx;">★ {{ companion.rating }} ({{ companion.serviceCount }} 次服务)</text>
+            <text class="text-sm text-theme" style="display: block; margin-top: 4rpx;">社区点赞 {{ companionLikeCount }}</text>
           </view>
         </view>
         <view class="flex gap-md" style="margin-top: 16rpx;">
           <button v-if="canBook" class="btn-primary" style="flex: 1;" @tap="quickAppointment">预约</button>
-          <button class="btn-secondary" style="flex: 1;" @tap="follow">关注</button>
+          <button class="btn-secondary" style="flex: 1;" @tap="toggleCompanionLike">{{ companionLiked ? '取消点赞' : '推荐点赞' }}</button>
         </view>
       </uni-card>
 
@@ -80,7 +81,7 @@
 </template>
 
 <script>
-import { companionApi, evaluationApi } from '@/utils/api.js';
+import { companionApi, communityApi, evaluationApi } from '@/utils/api.js';
 import { isPatientRole } from '@/utils/permission.js';
 import avatar from '@/components/avatar.vue';
 
@@ -93,7 +94,9 @@ export default {
       currentUser: null,
       companionId: null,
       companion: null,
-      evaluations: []
+      evaluations: [],
+      companionLikeCount: 0,
+      companionLiked: false
     };
   },
   computed: {
@@ -107,6 +110,7 @@ export default {
       this.companionId = options.id;
       this.loadCompanion(options.id);
       this.loadEvaluations(options.id);
+      this.loadCompanionLikeState(options.id);
     }
   },
   methods: {
@@ -126,6 +130,25 @@ export default {
         this.evaluations = page.records || [];
       } catch (error) {
         console.error('加载评价失败', error);
+      }
+    },
+    async loadCompanionLikeState(id) {
+      try {
+        const list = await communityApi.goldCompanions(20);
+        const matched = (list || []).find((item) => Number(item.id) === Number(id));
+        this.companionLikeCount = Number(matched?.likeCount || 0);
+      } catch (error) {
+        this.companionLikeCount = 0;
+      }
+    },
+    async toggleCompanionLike() {
+      try {
+        const result = await communityApi.toggleCompanionLike(this.companionId);
+        this.companionLiked = !!result.liked;
+        this.companionLikeCount = Number(result.likeCount || 0);
+        uni.showToast({ title: this.companionLiked ? '已点赞推荐' : '已取消点赞', icon: 'success' });
+      } catch (error) {
+        uni.showToast({ title: error.message || '操作失败', icon: 'none' });
       }
     },
     quickAppointment() {

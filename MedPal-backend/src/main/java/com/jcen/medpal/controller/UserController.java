@@ -241,12 +241,13 @@ public class UserController {
         }
         User user = new User();
         BeanUtils.copyProperties(userAddRequest, user);
-        // 默认密码 12345678
-        String defaultPassword = "12345678";
-        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + defaultPassword).getBytes());
+        String initPassword = StringUtils.isBlank(userAddRequest.getUserPassword()) ? "12345678" : userAddRequest.getUserPassword();
+        ThrowUtils.throwIf(initPassword.length() < 6, ErrorCode.PARAMS_ERROR, "初始密码至少 6 位");
+        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + initPassword).getBytes());
         user.setUserPassword(encryptPassword);
         boolean result = userService.save(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        userService.ensureLegacyCompanion(user);
         return ResultUtils.success(user.getId());
     }
 
@@ -427,6 +428,8 @@ public class UserController {
         user.setId(loginUser.getId());
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        User updatedUser = userService.getById(loginUser.getId());
+        userService.ensureLegacyCompanion(updatedUser);
         return ResultUtils.success(true);
     }
 
@@ -669,6 +672,8 @@ public class UserController {
         }
         boolean result = userService.updateById(updateUser);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        User updatedUser = userService.getById(companion.getId());
+        userService.ensureLegacyCompanion(updatedUser);
         return ResultUtils.success(true);
     }
 

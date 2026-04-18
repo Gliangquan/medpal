@@ -1,6 +1,11 @@
 const resolveBaseUrl = () => {
   if (typeof window !== 'undefined' && window.location?.origin) {
-    return `${window.location.origin}/api`;
+    const { hostname, port, origin } = window.location;
+    const isLocalH5 = (hostname === 'localhost' || hostname === '127.0.0.1') && port === '19913';
+    if (isLocalH5) {
+      return 'http://127.0.0.1:19911/api';
+    }
+    return `${origin}/api`;
   }
   return 'http://127.0.0.1:19911/api';
 };

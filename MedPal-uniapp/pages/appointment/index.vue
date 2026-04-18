@@ -478,47 +478,36 @@ export default {
     },
     async loadHospitals() {
       try {
-        const page = await hospitalApi.list({ current: 1, size: 20 });
-        const hospitals = page.records || [];
-        this.hospitals = hospitals;
-        await this.fillHospitalStats(hospitals);
+        const [hospitalPage, departmentPage, doctorPage] = await Promise.all([
+          hospitalApi.list({ current: 1, size: 100 }),
+          departmentApi.list({ current: 1, size: 1000 }),
+          doctorApi.list({ current: 1, size: 1000 })
+        ]);
+        const hospitals = hospitalPage.records || [];
+        const departments = departmentPage.records || [];
+        const doctors = doctorPage.records || [];
+        const departmentCountMap = new Map();
+        const doctorCountMap = new Map();
+
+        departments.forEach((item) => {
+          const key = Number(item.hospitalId);
+          if (!Number.isFinite(key)) return;
+          departmentCountMap.set(key, (departmentCountMap.get(key) || 0) + 1);
+        });
+
+        doctors.forEach((item) => {
+          const key = Number(item.hospitalId);
+          if (!Number.isFinite(key)) return;
+          doctorCountMap.set(key, (doctorCountMap.get(key) || 0) + 1);
+        });
+
+        this.hospitals = hospitals.map((hospital) => ({
+          ...hospital,
+          departmentCount: departmentCountMap.get(Number(hospital.id)) || this.getHospitalDepartmentCount(hospital),
+          doctorCount: doctorCountMap.get(Number(hospital.id)) || this.getHospitalDoctorCount(hospital)
+        }));
       } catch (error) {
         console.error('加载医院列表失败', error);
-      }
-    },
-    async fillHospitalStats(hospitals) {
-      if (!Array.isArray(hospitals) || !hospitals.length) return;
-      await Promise.all(
-        hospitals.map(async (hospital) => {
-          if (!hospital?.id) return;
-          const tasks = [];
-          if (!this.hasHospitalDepartmentCount(hospital)) {
-            tasks.push(this.fetchHospitalDepartmentCount(hospital));
-          }
-          if (!this.hasHospitalDoctorCount(hospital)) {
-            tasks.push(this.fetchHospitalDoctorCount(hospital));
-          }
-          if (tasks.length) {
-            await Promise.all(tasks);
-          }
-        })
-      );
-      this.hospitals = [...hospitals];
-    },
-    async fetchHospitalDepartmentCount(hospital) {
-      try {
-        const page = await departmentApi.list({ current: 1, size: 1, hospitalId: hospital.id });
-        hospital.departmentCount = this.parseCount(page?.total ?? page?.records?.length ?? 0);
-      } catch (error) {
-        hospital.departmentCount = this.getHospitalDepartmentCount(hospital);
-      }
-    },
-    async fetchHospitalDoctorCount(hospital) {
-      try {
-        const page = await doctorApi.list({ current: 1, size: 1, hospitalId: hospital.id });
-        hospital.doctorCount = this.parseCount(page?.total ?? page?.records?.length ?? 0);
-      } catch (error) {
-        hospital.doctorCount = this.getHospitalDoctorCount(hospital);
       }
     },
     async fillDepartmentDoctorCount(departments) {
@@ -740,8 +729,9 @@ export default {
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     },
     formatApiDateTime(value) {
+      if (!value) return null;
       const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return '';
+      if (Number.isNaN(date.getTime())) return null;
       const pad = (num) => String(num).padStart(2, '0');
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
     },
@@ -793,15 +783,16 @@ export default {
     },
     buildOrderPayload() {
       const start = this.appointmentStartTime ? new Date(this.appointmentStartTime) : null;
-      const end = this.appointmentEndTime;
-      const rangeText = start && end ? `${formatDateTime(start)} 至 ${formatDateTime(end)}` : '';
+      const validStart = start && !Number.isNaN(start.getTime()) ? start : null;
+      const end = validStart ? this.appointmentEndTime : null;
+      const rangeText = validStart && end ? `${formatDateTime(validStart)} 至 ${formatDateTime(end)}` : '';
       return {
         id: this.draftId || undefined,
         hospitalId: this.selectedHospital?.id || null,
         departmentId: this.selectedDepartment?.id || this.selectedDoctor?.departmentId || null,
         doctorId: this.selectedDoctor?.id || null,
         companionId: this.selectedCompanion?.id || null,
-        appointmentDate: this.formatApiDateTime(start),
+        appointmentDate: this.formatApiDateTime(validStart),
         duration: `${this.duration}h`,
         specificNeeds: this.buildSpecificNeeds(rangeText),
         totalPrice: this.totalCost,
@@ -855,10 +846,8 @@ export default {
       }
       this.submitting = true;
       try {
-        const payload = {
-          userId: user.id,
-          ...this.buildOrderPayload()
-        };
+        const payload = this.buildOrderPayload();
+        delete payload.id;
         const order = await orderApi.create(payload);
         uni.removeStorageSync('medpal_appointment_draft');
         uni.showToast({ title: '预约成功', icon: 'success' });

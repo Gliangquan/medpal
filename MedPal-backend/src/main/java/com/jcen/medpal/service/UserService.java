@@ -205,5 +205,12 @@ public interface UserService extends IService<User> {
      * @return 统计信息
      */
     UserStatisticsVO getUserStatistics();
+
+    /**
+     * 确保陪诊员同步到旧 companion 表，兼容历史外键与旧查询逻辑
+     *
+     * @param user 陪诊员用户
+     */
+    void ensureLegacyCompanion(User user);
 }
 

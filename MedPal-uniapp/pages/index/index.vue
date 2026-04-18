@@ -52,6 +52,11 @@
               <text class="action-title">健康科普</text>
               <text class="action-sub">查看就医指南与公告</text>
             </view>
+            <view class="action-item" @tap="goCommunity">
+              <image class="action-icon" src="/static/icon_med/xiaoxi.png" mode="aspectFit" />
+              <text class="action-title">社区广场</text>
+              <text class="action-sub">交流经验、点赞推荐陪诊员</text>
+            </view>
             <view class="action-item" @tap="goNotification">
               <image class="action-icon" src="/static/icon_med/xiaoxi.png" mode="aspectFit" />
               <text class="action-title">消息中心</text>
@@ -172,10 +177,20 @@
               <text class="action-title">在线沟通</text>
               <text class="action-sub">快速响应患者咨询</text>
             </view>
+            <view class="action-item" @tap="goIncomeDetail">
+              <image class="action-icon" src="/static/icon_med/wode.png" mode="aspectFit" />
+              <text class="action-title">收入统计</text>
+              <text class="action-sub">查看收入明细与结算状态</text>
+            </view>
             <view class="action-item" @tap="goEmergency">
               <image class="action-icon" src="/static/icon_med/tixing.png" mode="aspectFit" />
               <text class="action-title">紧急联动</text>
               <text class="action-sub">异常场景快速上报</text>
+            </view>
+            <view class="action-item" @tap="goTraining">
+              <image class="action-icon" src="/static/icon_med/suoming.png" mode="aspectFit" />
+              <text class="action-title">培训学习</text>
+              <text class="action-sub">学习医疗与服务技巧</text>
             </view>
           </view>
         </view>
@@ -583,15 +598,25 @@ export default {
     goContentList() {
       uni.navigateTo({ url: '/pages/content/list' });
     },
+    goCommunity() {
+      uni.navigateTo({ url: '/pages/community/index' });
+    },
     goProfile() {
       uni.switchTab({ url: '/pages/profile/index' });
     },
     goChat() {
       uni.navigateTo({ url: '/pages/chat/index' });
     },
+    goIncomeDetail() {
+      uni.navigateTo({ url: '/pages/income/index' });
+    },
     goCompanionCertification() {
       if (!this.isCompanionRole) return;
       uni.navigateTo({ url: '/pages/companion/certification' });
+    },
+    goTraining() {
+      if (!this.isCompanionRole) return;
+      uni.navigateTo({ url: '/pages/training/index' });
     },
     goEmergency() {
       if (this.isCompanionRole) {

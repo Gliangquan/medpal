@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.jcen.medpal.common.ErrorCode;
 import com.jcen.medpal.constant.CommonConstant;
 import com.jcen.medpal.exception.BusinessException;
+import com.jcen.medpal.mapper.LegacyCompanionMapper;
 import com.jcen.medpal.mapper.UserMapper;
 import com.jcen.medpal.model.dto.user.UserQueryRequest;
 import com.jcen.medpal.model.dto.user.WeChatLoginRequest;
@@ -50,6 +51,9 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> implement
 
     @Resource
     private WeChatService weChatService;
+
+    @Resource
+    private LegacyCompanionMapper legacyCompanionMapper;
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword, String userPhone, String userRole, String userName, String idCard) {
@@ -109,6 +113,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> implement
             if (!saveResult) {
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
             }
+            ensureLegacyCompanion(user);
             return user.getId();
         }
     }
@@ -448,6 +453,28 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> implement
         LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtils.copyProperties(user, loginUserVO);
         return loginUserVO;
+    }
+
+    @Override
+    public void ensureLegacyCompanion(User user) {
+        if (user == null || user.getId() == null || !"companion".equals(user.getUserRole())) {
+            return;
+        }
+        User legacyUser = new User();
+        BeanUtils.copyProperties(user, legacyUser);
+        legacyUser.setUserName(StringUtils.defaultIfBlank(user.getUserName(), user.getUserAccount()));
+        legacyUser.setRealNameStatus(StringUtils.defaultIfBlank(user.getRealNameStatus(), "not_submitted"));
+        legacyUser.setQualificationStatus(StringUtils.defaultIfBlank(user.getQualificationStatus(), "not_submitted"));
+        legacyUser.setRating(user.getRating() == null ? 0D : user.getRating());
+        legacyUser.setServiceCount(user.getServiceCount() == null ? 0 : user.getServiceCount());
+        legacyUser.setTotalIncome(user.getTotalIncome() == null ? 0D : user.getTotalIncome());
+        legacyUser.setStatus(user.getStatus() == null ? 1 : user.getStatus());
+        Long count = legacyCompanionMapper.countById(user.getId());
+        if (count != null && count > 0) {
+            legacyCompanionMapper.updateFromUser(legacyUser);
+        } else {
+            legacyCompanionMapper.insertFromUser(legacyUser);
+        }
     }
 
     @Override

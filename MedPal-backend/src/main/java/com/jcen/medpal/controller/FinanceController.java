@@ -1,10 +1,7 @@
 package com.jcen.medpal.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jcen.medpal.common.ResultUtils;
-import com.jcen.medpal.model.entity.Settlement;
-import com.jcen.medpal.service.FinanceService;
+import com.jcen.medpal.service.impl.FinanceServiceImpl;
 import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 
@@ -13,21 +10,26 @@ import javax.annotation.Resource;
 public class FinanceController {
 
     @Resource
-    private FinanceService financeService;
+    private FinanceServiceImpl financeService;
+
+    @GetMapping("/summary")
+    public Object getFinanceSummary() {
+        try {
+            return ResultUtils.success(financeService.getFinanceSummary());
+        } catch (Exception e) {
+            return ResultUtils.error(40000, e.getMessage() == null ? "查询失败" : e.getMessage());
+        }
+    }
 
     @GetMapping("/settlement/list")
     public Object listSettlements(@RequestParam(defaultValue = "1") long current,
                                   @RequestParam(defaultValue = "10") long size,
-                                  @RequestParam(required = false) String status) {
+                                  @RequestParam(required = false) String status,
+                                  @RequestParam(required = false) String keyword) {
         try {
-            Page<Settlement> page = new Page<>(current, size);
-            IPage<Settlement> result = financeService.lambdaQuery()
-                    .eq(status != null, Settlement::getStatus, status)
-                    .orderByDesc(Settlement::getCreateTime)
-                    .page(page);
-            return ResultUtils.success(result);
+            return ResultUtils.success(financeService.listSettlementOverview(current, size, status, keyword));
         } catch (Exception e) {
-            return ResultUtils.error(40000, "查询失败");
+            return ResultUtils.error(40000, e.getMessage() == null ? "查询失败" : e.getMessage());
         }
     }
 
@@ -37,7 +39,7 @@ public class FinanceController {
             boolean result = financeService.processSettlement(id);
             return result ? ResultUtils.success("结算成功") : ResultUtils.error(40000, "结算失败");
         } catch (Exception e) {
-            return ResultUtils.error(40000, "结算失败");
+            return ResultUtils.error(40000, e.getMessage() == null ? "结算失败" : e.getMessage());
         }
     }
 
@@ -47,7 +49,7 @@ public class FinanceController {
             boolean result = financeService.batchProcessSettlements(ids);
             return result ? ResultUtils.success("批量结算成功") : ResultUtils.error(40000, "批量结算失败");
         } catch (Exception e) {
-            return ResultUtils.error(40000, "批量结算失败");
+            return ResultUtils.error(40000, e.getMessage() == null ? "批量结算失败" : e.getMessage());
         }
     }
 
@@ -57,7 +59,7 @@ public class FinanceController {
             var result = financeService.getFinanceReport(startDate, endDate);
             return ResultUtils.success(result);
         } catch (Exception e) {
-            return ResultUtils.error(40000, "查询失败");
+            return ResultUtils.error(40000, e.getMessage() == null ? "查询失败" : e.getMessage());
         }
     }
 
@@ -68,7 +70,7 @@ public class FinanceController {
             var result = financeService.getFinanceLogs(current, size);
             return ResultUtils.success(result);
         } catch (Exception e) {
-            return ResultUtils.error(40000, "查询失败");
+            return ResultUtils.error(40000, e.getMessage() == null ? "查询失败" : e.getMessage());
         }
     }
 }

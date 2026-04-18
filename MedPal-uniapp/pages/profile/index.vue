@@ -18,8 +18,11 @@
     <uni-section title="常用功能" class="section"></uni-section>
     <uni-list :border="false">
       <uni-list-item :title="isCompanionRole ? '接单中心' : '我的订单'" thumb="/static/icon_med/dingdan.png" showArrow clickable @click="goOrders"></uni-list-item>
+      <uni-list-item title="社区广场" thumb="/static/icon_med/suoming.png" showArrow clickable @click="goCommunity"></uni-list-item>
       <uni-list-item v-if="isPatientRole" title="我的病历" thumb="/static/icon_med/bingli.png" showArrow clickable @click="goRecords"></uni-list-item>
       <uni-list-item v-if="isCompanionRole" title="陪诊认证" thumb="/static/icon_med/jiangbei.png" :right-text="certificationStatusText" showArrow clickable @click="goCertification"></uni-list-item>
+      <uni-list-item v-if="isCompanionRole" title="收入统计" thumb="/static/icon_med/wode.png" showArrow clickable @click="goIncome"></uni-list-item>
+      <uni-list-item v-if="isCompanionRole" title="培训学习" thumb="/static/icon_med/suoming.png" showArrow clickable @click="goTraining"></uni-list-item>
       <uni-list-item title="消息通知" thumb="/static/icon_med/xiaoxi.png" showArrow clickable @click="goNotification">
         <template v-slot:footer>
           <uni-badge v-if="unreadCount > 0" :text="badgeText" type="error"></uni-badge>
@@ -31,7 +34,7 @@
     <uni-section title="账号设置" class="section"></uni-section>
     <uni-list :border="false">
       <uni-list-item title="编辑资料" thumb="/static/icon_med/bianji.png" showArrow clickable @click="goEdit"></uni-list-item>
-      <uni-list-item title="通知与隐私设置" thumb="/static/icon_med/shezhi.png" showArrow clickable @click="goSettings"></uni-list-item>
+      <uni-list-item title="重置密码" thumb="/static/icon_med/shezhi.png" showArrow clickable @click="goSettings"></uni-list-item>
     </uni-list>
 
     <view class="section logout-wrap">
@@ -134,12 +137,23 @@ export default {
     goNotification() {
       uni.switchTab({ url: '/pages/notification/index' });
     },
+    goCommunity() {
+      uni.navigateTo({ url: '/pages/community/index' });
+    },
     goEmergency() {
       uni.navigateTo({ url: '/pages/emergency/index' });
     },
     goCertification() {
       if (!this.isCompanionRole) return;
       uni.navigateTo({ url: '/pages/companion/certification' });
+    },
+    goIncome() {
+      if (!this.isCompanionRole) return;
+      uni.navigateTo({ url: '/pages/income/index' });
+    },
+    goTraining() {
+      if (!this.isCompanionRole) return;
+      uni.navigateTo({ url: '/pages/training/index' });
     },
     goSettings() {
       uni.navigateTo({ url: '/pages/settings/index' });

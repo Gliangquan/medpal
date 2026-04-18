@@ -112,6 +112,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
+import { batchProcessFinanceSettlements, getFinanceSummary, listFinanceSettlements, processFinanceSettlement } from '../../api';
 
 const columns = [
   { title: '陪诊员', dataIndex: 'companionName', key: 'companionName', width: 120 },
@@ -125,18 +126,18 @@ const columns = [
   { title: '操作', key: 'action', width: 120, fixed: 'right' },
 ];
 
-const tableData = ref([]);
+const tableData = ref<any[]>([]);
 const loading = ref(false);
 const searchText = ref('');
 const filterStatus = ref('');
 const detailModalVisible = ref(false);
-const selectedRecord = ref(null);
-const selectedRowKeys = ref([]);
+const selectedRecord = ref<any>(null);
+const selectedRowKeys = ref<any[]>([]);
 
-const totalIncome = ref(45800);
-const pendingAmount = ref(8900);
-const settledAmount = ref(36900);
-const platformFee = ref(4580);
+const totalIncome = ref(0);
+const pendingAmount = ref(0);
+const settledAmount = ref(0);
+const platformFee = ref(0);
 
 const pagination = reactive({
   current: 1,
@@ -159,18 +160,26 @@ const handleSearch = () => {
   fetchData();
 };
 
+const fetchSummary = async () => {
+  const summary = await getFinanceSummary();
+  totalIncome.value = Number(summary.data?.totalIncome || 0);
+  pendingAmount.value = Number(summary.data?.pendingAmount || 0);
+  settledAmount.value = Number(summary.data?.settledAmount || 0);
+  platformFee.value = Number(summary.data?.platformFee || 0);
+};
+
 const fetchData = async () => {
   loading.value = true;
   try {
-    // 从后端获取财务数据
-    // 这里需要后端提供相应的 API 接口
-    // 暂时使用空数据，等待后端接口实现
-    tableData.value = [];
-    pagination.total = 0;
-    totalIncome.value = 0;
-    pendingAmount.value = 0;
-    settledAmount.value = 0;
-    platformFee.value = 0;
+    await fetchSummary();
+    const page = await listFinanceSettlements(
+      pagination.current,
+      pagination.pageSize,
+      filterStatus.value || undefined,
+      searchText.value.trim() || undefined
+    );
+    tableData.value = page.data?.records || [];
+    pagination.total = page.data?.total || 0;
   } catch (error) {
     message.error('获取数据失败');
   } finally {
@@ -183,19 +192,34 @@ const showDetailModal = (record: any) => {
   detailModalVisible.value = true;
 };
 
-const handleSettle = (record: any) => {
-  message.success(`结算陪诊员 ${record.companionName} 成功`);
-  fetchData();
+const handleSettle = async (record: any) => {
+  try {
+    const response = await processFinanceSettlement(record.id);
+    if (response.code === 0) {
+      message.success(`结算陪诊员 ${record.companionName} 成功`);
+      detailModalVisible.value = false;
+      fetchData();
+    }
+  } catch (error) {
+    message.error('结算失败');
+  }
 };
 
-const handleBatchSettle = () => {
+const handleBatchSettle = async () => {
   if (selectedRowKeys.value.length === 0) {
     message.warning('请先选择要结算的陪诊员');
     return;
   }
-  message.success(`批量结算 ${selectedRowKeys.value.length} 条记录成功`);
-  selectedRowKeys.value = [];
-  fetchData();
+  try {
+    const response = await batchProcessFinanceSettlements(selectedRowKeys.value.join(','));
+    if (response.code === 0) {
+      message.success(`批量结算 ${selectedRowKeys.value.length} 条记录成功`);
+      selectedRowKeys.value = [];
+      fetchData();
+    }
+  } catch (error) {
+    message.error('批量结算失败');
+  }
 };
 
 const handleTableChange = (pag: any) => {

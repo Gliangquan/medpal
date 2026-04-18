@@ -19,10 +19,10 @@
 
     <view class="card">
       <view class="section-title">当前位置</view>
-      <view class="location" @tap="getLocation">
-        <text>{{ locationName || '获取位置中...' }}</text>
-        <uni-icons type="right" size="16" color="#9aa4b8"></uni-icons>
+      <view class="location-box">
+        <text class="location-text">{{ locationName || (locating ? '定位中...' : '暂未获取位置') }}</text>
       </view>
+      <button class="btn-location" :disabled="locating" @tap="getLocation">{{ locating ? '定位中...' : '获取当前位置' }}</button>
       <text v-if="locationError" class="error">{{ locationError }}</text>
     </view>
 
@@ -79,6 +79,7 @@ export default {
       content: '',
       locationName: '',
       locationError: '',
+      locating: false,
       latitude: null,
       longitude: null,
       selectedTag: '',
@@ -93,6 +94,7 @@ export default {
   onShow() {
     this.loadLatestHelp();
   },
+  computed: {},
   methods: {
     async loadLatestHelp() {
       const user = uni.getStorageSync('userInfo');
@@ -116,18 +118,62 @@ export default {
       }
     },
     getLocation() {
+      if (this.locating) return;
+      this.locating = true;
+      this.locationError = '';
+      const handleFail = (message) => {
+        this.latitude = null;
+        this.longitude = null;
+        this.locationName = '';
+        this.locationError = message || '定位失败，请检查定位权限';
+        this.locating = false;
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords || {};
+            if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+              handleFail('定位失败，请稍后重试');
+              return;
+            }
+            this.latitude = Number(latitude.toFixed(6));
+            this.longitude = Number(longitude.toFixed(6));
+            this.locationName = `${this.latitude.toFixed(4)}, ${this.longitude.toFixed(4)}`;
+            this.locating = false;
+          },
+          (error) => {
+            const code = error?.code;
+            if (code === 1) {
+              handleFail('请在浏览器中允许定位权限');
+              return;
+            }
+            if (code === 2) {
+              handleFail('无法获取当前位置，请确认系统定位已开启');
+              return;
+            }
+            handleFail('定位超时，请稍后重试');
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+        return;
+      }
+
       uni.getLocation({
         type: 'gcj02',
         success: (res) => {
           this.latitude = Number(res.latitude);
           this.longitude = Number(res.longitude);
           this.locationName = `${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)}`;
-          this.locationError = '';
+          this.locating = false;
         },
-        fail: () => {
-          this.latitude = null;
-          this.longitude = null;
-          this.locationError = '请授权位置权限以便快速定位';
+        fail: (error) => {
+          console.error('getLocation failed', error);
+          handleFail('请授权位置权限以便快速定位');
         }
       });
     },
@@ -268,12 +314,30 @@ export default {
   margin-bottom: 12rpx;
 }
 
-.location {
+.location-box {
+  min-height: 120rpx;
+  border-radius: 18rpx;
+  background: #fff5f5;
+  border: 1rpx dashed rgba(255, 92, 92, 0.18);
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 0 24rpx;
+}
+
+.location-text {
   font-size: 22rpx;
   color: #5f6f94;
+  line-height: 1.6;
+}
+
+.btn-location {
+  width: 100%;
+  margin-top: 12rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 92, 92, 0.1);
+  color: #c83b3b;
+  border: 1rpx solid rgba(255, 92, 92, 0.18);
+  font-size: 22rpx;
 }
 
 .error {

@@ -5,8 +5,13 @@
 
 const resolveWsUrl = () => {
   if (typeof window !== 'undefined' && window.location?.host) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}/api/ws`;
+    const { protocol, hostname, port, host } = window.location;
+    const isLocalH5 = (hostname === 'localhost' || hostname === '127.0.0.1') && port === '19913';
+    if (isLocalH5) {
+      return 'ws://127.0.0.1:19911/api/ws';
+    }
+    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsProtocol}//${host}/api/ws`;
   }
   return 'ws://127.0.0.1:19911/api/ws';
 };

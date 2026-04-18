@@ -90,6 +90,7 @@
           <button
             v-if="isPatientUser"
             class="btn-ghost action-btn"
+            :class="{ 'action-btn-wide': !order.companionId }"
             :disabled="!order.companionId"
             @tap="contactCompanion"
           >
@@ -541,6 +542,11 @@ export default {
 }
 
 .action-back {
+  flex-basis: 100%;
+  width: 100% !important;
+}
+
+.action-btn-wide {
   flex-basis: 100%;
   width: 100% !important;
 }

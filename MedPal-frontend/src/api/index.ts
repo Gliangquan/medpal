@@ -13,3 +13,4 @@ export * from './modules/doctor';
 export * from './modules/department';
 export * from './modules/evaluation';
 export * from './modules/content';
+export * from './modules/finance';

@@ -120,22 +120,6 @@
             <span>内容管理</span>
           </a-menu-item>
 
-          <!-- 通知中心 -->
-          <a-menu-item key="/admin/notifications" class="menu-item">
-            <template #icon>
-              <message-outlined />
-            </template>
-            <span>通知中心</span>
-          </a-menu-item>
-
-          <!-- 文件管理 -->
-          <a-menu-item key="/admin/files" class="menu-item">
-            <template #icon>
-              <folder-open-outlined />
-            </template>
-            <span>文件管理</span>
-          </a-menu-item>
-
           <!-- 系统设置 -->
           <a-menu-item key="/admin/settings" class="menu-item">
             <template #icon>
@@ -214,7 +198,6 @@ import {
   BarChartOutlined,
   SettingOutlined,
   FileOutlined,
-  FolderOpenOutlined,
   DownOutlined,
   StarOutlined,
   MessageOutlined,

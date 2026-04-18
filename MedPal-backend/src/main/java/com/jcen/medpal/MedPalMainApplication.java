@@ -17,9 +17,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableAspectJAutoProxy(proxyTargetClass = true, exposeProxy = true)
 @Slf4j
-public class MainApplication {
+public class MedPalMainApplication {
     public static void main(String[] args) {
-        SpringApplication.run(MainApplication.class, args);
+        SpringApplication.run(MedPalMainApplication.class, args);
         log.info("接口文档访问：http://localhost:19911/api/doc.html#/home");
     }
 

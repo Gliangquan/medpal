@@ -143,6 +143,36 @@
 			"style": {
 				"navigationBarTitleText": "内容详情"
 			}
+		},
+		{
+			"path": "pages/community/index",
+			"style": {
+				"navigationBarTitleText": "社区广场"
+			}
+		},
+		{
+			"path": "pages/community/detail",
+			"style": {
+				"navigationBarTitleText": "帖子详情"
+			}
+		},
+		{
+			"path": "pages/income/index",
+			"style": {
+				"navigationBarTitleText": "收入统计"
+			}
+		},
+		{
+			"path": "pages/training/index",
+			"style": {
+				"navigationBarTitleText": "培训学习"
+			}
+		},
+		{
+			"path": "pages/training/detail",
+			"style": {
+				"navigationBarTitleText": "课程详情"
+			}
 		}
 	],
 	"globalStyle": {

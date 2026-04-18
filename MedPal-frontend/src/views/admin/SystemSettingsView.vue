@@ -136,15 +136,12 @@
         <a-form-item label="登录账号" required>
           <a-input v-model:value="adminForm.username" placeholder="请输入登录账号" />
         </a-form-item>
-        <a-form-item label="密码" required v-if="!isEditAdmin">
-          <a-input-password v-model:value="adminForm.password" placeholder="请输入密码" />
+        <a-form-item label="初始密码" v-if="!isEditAdmin" required>
+          <a-input-password v-model:value="adminForm.password" placeholder="请输入初始密码（至少6位）" />
         </a-form-item>
         <a-form-item label="角色" required>
-          <a-select v-model:value="adminForm.role" placeholder="请选择角色">
-            <a-select-option value="super_admin">超级管理员</a-select-option>
-            <a-select-option value="user_admin">用户管理员</a-select-option>
-            <a-select-option value="order_admin">订单管理员</a-select-option>
-            <a-select-option value="finance_admin">财务管理员</a-select-option>
+          <a-select v-model:value="adminForm.role" placeholder="请选择角色" disabled>
+            <a-select-option value="admin">管理员</a-select-option>
           </a-select>
         </a-form-item>
       </a-form>
@@ -155,12 +152,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
+import { addUser, deleteUser, listUserVOByPage, updateUser } from '../../api';
 
 const adminColumns = [
   { title: '管理员名称', dataIndex: 'name', key: 'name', width: 120 },
   { title: '登录账号', dataIndex: 'username', key: 'username', width: 150 },
-  { title: '角色', dataIndex: 'role', key: 'role', width: 150 },
-  { title: '创建时间', dataIndex: 'createdTime', key: 'createdTime', width: 150 },
+  { title: '角色', dataIndex: 'role', key: 'role', width: 120 },
+  { title: '创建时间', dataIndex: 'createdTime', key: 'createdTime', width: 180 },
   { title: '操作', key: 'action', width: 120, fixed: 'right' },
 ];
 
@@ -207,8 +205,8 @@ const adminForm = reactive({
   id: null,
   name: '',
   username: '',
-  password: '',
-  role: 'user_admin',
+  password: '12345678',
+  role: 'admin',
 });
 
 const handleSaveBasic = () => {
@@ -226,11 +224,21 @@ const handleSaveFeatures = () => {
 const fetchAdminData = async () => {
   loading.value = true;
   try {
-    // 从后端获取管理员数据
-    // 这里需要后端提供相应的 API 接口
-    // 暂时使用空数据，等待后端接口实现
-    adminData.value = [];
-    adminPagination.total = 0;
+    const response = await listUserVOByPage({
+      current: adminPagination.current,
+      pageSize: adminPagination.pageSize,
+      userRole: 'admin'
+    });
+    if (response.code === 0) {
+      adminData.value = (response.data.records || []).map((item: any) => ({
+        id: item.id,
+        name: item.userName || item.userAccount,
+        username: item.userAccount,
+        role: '管理员',
+        createdTime: item.createTime || '-'
+      }));
+      adminPagination.total = response.data.total || 0;
+    }
   } catch (error) {
     message.error('获取数据失败');
   } finally {
@@ -243,26 +251,68 @@ const showAddAdminModal = () => {
   adminForm.id = null;
   adminForm.name = '';
   adminForm.username = '';
-  adminForm.password = '';
-  adminForm.role = 'user_admin';
+  adminForm.password = '12345678';
+  adminForm.role = 'admin';
   adminModalVisible.value = true;
 };
 
 const showEditAdminModal = (record: any) => {
   isEditAdmin.value = true;
-  Object.assign(adminForm, record);
+  adminForm.id = record.id;
+  adminForm.name = record.name;
+  adminForm.username = record.username;
+  adminForm.password = '12345678';
+  adminForm.role = 'admin';
   adminModalVisible.value = true;
 };
 
-const handleAdminSubmit = () => {
-  message.success(isEditAdmin.value ? '编辑成功' : '新增成功');
-  adminModalVisible.value = false;
-  fetchAdminData();
+const handleAdminSubmit = async () => {
+  if (!adminForm.name || !adminForm.username) {
+    message.warning('请填写管理员名称和登录账号');
+    return;
+  }
+  if (!isEditAdmin.value && (!adminForm.password || adminForm.password.length < 6)) {
+    message.warning('请填写至少 6 位初始密码');
+    return;
+  }
+  try {
+    if (isEditAdmin.value && adminForm.id) {
+      const response = await updateUser({
+        id: adminForm.id,
+        userName: adminForm.name,
+        userRole: 'admin'
+      });
+      if (response.code === 0) {
+        message.success('编辑成功');
+      }
+    } else {
+      const response = await addUser({
+        userName: adminForm.name,
+        userAccount: adminForm.username,
+        userPassword: adminForm.password,
+        userRole: 'admin'
+      });
+      if (response.code === 0) {
+        message.success('新增成功');
+      }
+    }
+    adminModalVisible.value = false;
+    fetchAdminData();
+  } catch (error) {
+    message.error('操作失败');
+  }
 };
 
-const handleDeleteAdmin = (record: any) => {
-  message.success(`删除管理员 ${record.name} 成功`);
-  fetchAdminData();
+const handleDeleteAdmin = async (record: any) => {
+  try {
+    const response = await deleteUser({ id: record.id });
+    if (response.code === 0) {
+      message.success(`删除管理员 ${record.name} 成功`);
+      fetchAdminData();
+    }
+  } catch (error) {
+    message.error('删除失败');
+  }
 };
 
 const handleAdminTableChange = (pag: any) => {

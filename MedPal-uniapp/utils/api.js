@@ -349,6 +349,36 @@ const paymentApi = {
   }
 };
 
+const incomeApi = {
+  detail(params = {}) {
+    return request({
+      url: '/income/detail',
+      method: 'GET',
+      params
+    });
+  },
+  statistics(params = {}) {
+    return request({
+      url: '/income/statistics',
+      method: 'GET',
+      params
+    });
+  },
+  total(params = {}) {
+    return request({
+      url: '/income/total',
+      method: 'GET',
+      params
+    });
+  },
+  settlementRule() {
+    return request({
+      url: '/income/settlement-rule',
+      method: 'GET'
+    });
+  }
+};
+
 const contentApi = {
   list(params) {
     return request({
@@ -361,6 +391,98 @@ const contentApi = {
     return request({
       url: `/content/published/${id}`,
       method: 'GET'
+    });
+  }
+};
+
+const trainingApi = {
+  courses(params = {}) {
+    return request({
+      url: '/training/courses',
+      method: 'GET',
+      params
+    });
+  },
+  detail(id) {
+    return request({
+      url: `/training/course/${id}`,
+      method: 'GET'
+    });
+  },
+  record(payload) {
+    return request({
+      url: '/training/record',
+      method: 'POST',
+      data: payload
+    });
+  },
+  records(params = {}) {
+    return request({
+      url: '/training/records',
+      method: 'GET',
+      params
+    });
+  },
+  progress(params = {}) {
+    return request({
+      url: '/training/progress',
+      method: 'GET',
+      params
+    });
+  }
+};
+
+const communityApi = {
+  listPosts(params) {
+    return request({
+      url: '/community/posts',
+      method: 'GET',
+      params
+    });
+  },
+  detail(id) {
+    return request({
+      url: `/community/post/${id}`,
+      method: 'GET'
+    });
+  },
+  createPost(payload) {
+    return request({
+      url: '/community/post',
+      method: 'POST',
+      data: payload
+    });
+  },
+  createComment(payload) {
+    return request({
+      url: '/community/comment',
+      method: 'POST',
+      data: payload
+    });
+  },
+  togglePostLike(id) {
+    return request({
+      url: `/community/post/${id}/like`,
+      method: 'POST'
+    });
+  },
+  toggleCommentLike(id) {
+    return request({
+      url: `/community/comment/${id}/like`,
+      method: 'POST'
+    });
+  },
+  toggleCompanionLike(id) {
+    return request({
+      url: `/community/companion/${id}/like`,
+      method: 'POST'
+    });
+  },
+  goldCompanions(limit = 10) {
+    return request({
+      url: '/community/gold-companions',
+      method: 'GET',
+      params: { limit }
     });
   }
 };
@@ -408,7 +530,10 @@ export {
   emergencyApi,
   settingsApi,
   paymentApi,
+  incomeApi,
   contentApi,
+  trainingApi,
+  communityApi,
   fileApi,
   setToken
 };
