@@ -120,6 +120,14 @@
             <span>内容管理</span>
           </a-menu-item>
 
+          <!-- 培训课程 -->
+          <a-menu-item key="/admin/training" class="menu-item">
+            <template #icon>
+              <file-outlined />
+            </template>
+            <span>培训课程</span>
+          </a-menu-item>
+
           <!-- 系统设置 -->
           <a-menu-item key="/admin/settings" class="menu-item">
             <template #icon>

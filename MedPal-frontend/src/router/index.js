@@ -19,6 +19,7 @@ import EvaluationView from '../views/admin/EvaluationView.vue';
 import FinanceView from '../views/admin/FinanceView.vue';
 import StatisticsView from '../views/admin/StatisticsView.vue';
 import ContentView from '../views/admin/ContentView.vue';
+import TrainingView from '../views/admin/TrainingView.vue';
 import SystemSettingsView from '../views/admin/SystemSettingsView.vue';
 import CompanionCertificationView from '../views/admin/CompanionCertificationView.vue';
 
@@ -53,6 +54,7 @@ const routes = [
       { path: 'companion-certifications', component: CompanionCertificationView, meta: { requiresAuth: true } },
       { path: 'statistics', component: StatisticsView, meta: { requiresAuth: true } },
       { path: 'content', component: ContentView, meta: { requiresAuth: true } },
+      { path: 'training', component: TrainingView, meta: { requiresAuth: true } },
       { path: 'settings', component: SystemSettingsView, meta: { requiresAuth: true } },
     ],
   },
