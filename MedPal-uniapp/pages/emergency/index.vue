@@ -20,9 +20,38 @@
     <view class="card">
       <view class="section-title">当前位置</view>
       <view class="location-box">
-        <text class="location-text">{{ locationName || (locating ? '定位中...' : '暂未获取位置') }}</text>
+        <text class="location-text">{{ locationDisplayText }}</text>
       </view>
-      <button class="btn-location" :disabled="locating" @tap="getLocation">{{ locating ? '定位中...' : '获取当前位置' }}</button>
+
+      <!-- #ifdef H5 -->
+      <view class="map-panel">
+        <view id="emergency-amap" class="amap-container"></view>
+        <view v-if="mapInitializing" class="map-mask">地图加载中...</view>
+        <view v-else-if="mapUnavailable" class="map-mask error-mask">地图加载失败，请稍后重试</view>
+      </view>
+      <text class="map-hint">已接入高德地图，可点击地图修正求助位置</text>
+      <!-- #endif -->
+
+      <!-- #ifndef H5 -->
+      <map
+        class="mini-map"
+        :latitude="mapLatitude"
+        :longitude="mapLongitude"
+        :scale="mapScale"
+        :markers="mapMarkers"
+        :show-location="true"
+      />
+      <text class="map-hint">可先自动定位，再使用地图选点修正具体位置</text>
+      <!-- #endif -->
+
+      <view class="action-row">
+        <button class="btn-location" :disabled="locating" @tap="getLocation">
+          {{ locating ? '定位中...' : (hasLocation ? '重新定位' : '获取当前位置') }}
+        </button>
+        <!-- #ifdef MP-WEIXIN -->
+        <button class="btn-location btn-outline" @tap="chooseLocationOnMap">地图选点</button>
+        <!-- #endif -->
+      </view>
       <text v-if="locationError" class="error">{{ locationError }}</text>
     </view>
 
@@ -55,10 +84,10 @@
       <view class="section-title">温馨提示</view>
       <view class="tip">1. 请保持手机畅通，工作人员会尽快联系您</view>
       <view class="tip">2. 如情况危急，请直接拨打急救电话 120</view>
-      <view class="tip">3. 尽量描述清楚症状和具体位置</view>
+      <view class="tip">3. 如自动定位不准，请手动修正地图位置</view>
     </view>
 
-    <button class="btn-danger" :disabled="!content" @tap="submit">立即求助</button>
+    <button class="btn-danger" :disabled="!content.trim()" @tap="submit">立即求助</button>
     <text class="hint">点击后将通知可处理的陪诊员，并在上方显示响应进度</text>
   </view>
 </template>
@@ -66,6 +95,7 @@
 <script>
 import { emergencyApi } from '@/utils/api.js';
 import { formatDateTime } from '@/utils/format.js';
+import { DEFAULT_CENTER, formatCoords, loadAmapSdk } from '@/utils/amap.js';
 
 const STATUS_TEXT = {
   pending: '已提交，等待响应',
@@ -84,17 +114,41 @@ export default {
       longitude: null,
       selectedTag: '',
       latestHelp: null,
-      quickTags: ['身体不适', '突发疾病', '跌倒受伤', '药物反应', '心理紧急', '其他紧急']
+      quickTags: ['身体不适', '突发疾病', '跌倒受伤', '药物反应', '心理紧急', '其他紧急'],
+      mapLatitude: DEFAULT_CENTER.latitude,
+      mapLongitude: DEFAULT_CENTER.longitude,
+      mapScale: 16,
+      mapMarkers: [],
+      mapInitializing: false,
+      mapUnavailable: false,
+      h5Map: null,
+      h5Marker: null,
+      h5Geocoder: null
     };
+  },
+  computed: {
+    hasLocation() {
+      return typeof this.latitude === 'number' && typeof this.longitude === 'number';
+    },
+    locationDisplayText() {
+      if (this.locationName) return this.locationName;
+      if (this.locating) return '定位中...';
+      return '暂未获取位置';
+    }
   },
   onLoad() {
     this.getLocation();
     this.loadLatestHelp();
   },
+  onReady() {
+    this.initializeMap();
+  },
   onShow() {
     this.loadLatestHelp();
   },
-  computed: {},
+  onUnload() {
+    this.destroyMap();
+  },
   methods: {
     async loadLatestHelp() {
       const user = uni.getStorageSync('userInfo');
@@ -117,71 +171,133 @@ export default {
         this.latestHelp = null;
       }
     },
+    async initializeMap() {
+      // #ifdef H5
+      if (this.h5Map || this.mapInitializing) return;
+      this.mapInitializing = true;
+      this.mapUnavailable = false;
+      try {
+        const AMap = await loadAmapSdk();
+        if (!AMap) {
+          throw new Error('高德地图未就绪');
+        }
+        this.h5Map = new AMap.Map('emergency-amap', {
+          zoom: this.mapScale,
+          center: [this.mapLongitude, this.mapLatitude],
+          viewMode: '2D'
+        });
+        this.h5Marker = new AMap.Marker({
+          position: [this.mapLongitude, this.mapLatitude],
+          anchor: 'bottom-center'
+        });
+        this.h5Map.add(this.h5Marker);
+        this.h5Map.addControl(new AMap.Scale());
+        this.h5Map.addControl(new AMap.ToolBar({ position: 'RB' }));
+        this.h5Geocoder = new AMap.Geocoder({ radius: 1000, extensions: 'base' });
+        this.h5Map.on('click', async (event) => {
+          const longitude = Number(event.lnglat.getLng().toFixed(6));
+          const latitude = Number(event.lnglat.getLat().toFixed(6));
+          await this.applyLocation({ latitude, longitude, source: 'manual' });
+          uni.showToast({ title: '已更新地图位置', icon: 'none' });
+        });
+        if (this.hasLocation) {
+          this.syncMap(this.latitude, this.longitude, this.locationName);
+        }
+      } catch (error) {
+        console.error('AMap init failed', error);
+        this.mapUnavailable = true;
+        this.locationError = this.locationError || '高德地图加载失败';
+      } finally {
+        this.mapInitializing = false;
+      }
+      // #endif
+    },
+    destroyMap() {
+      // #ifdef H5
+      if (this.h5Map && typeof this.h5Map.destroy === 'function') {
+        this.h5Map.destroy();
+      }
+      this.h5Map = null;
+      this.h5Marker = null;
+      this.h5Geocoder = null;
+      // #endif
+    },
     async getLocation() {
       if (this.locating) return;
       this.locating = true;
       this.locationError = '';
-      const handleFail = async (message) => {
-        try {
-          await this.fallbackLocateByIp(message);
-        } catch (error) {
-          this.latitude = null;
-          this.longitude = null;
-          this.locationName = '';
-          this.locationError = message || '定位失败，请检查定位权限';
-          this.locating = false;
-        }
-      };
-
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords || {};
-            if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-              handleFail('定位失败，请稍后重试');
-              return;
-            }
-            this.latitude = Number(latitude.toFixed(6));
-            this.longitude = Number(longitude.toFixed(6));
-            this.locationName = `${this.latitude.toFixed(4)}, ${this.longitude.toFixed(4)}`;
-            this.locating = false;
-          },
-          (error) => {
-            const code = error?.code;
-            if (code === 1) {
-              handleFail('浏览器定位不可用，已切换为网络定位');
-              return;
-            }
-            if (code === 2) {
-              handleFail('无法获取精确位置，已切换为网络定位');
-              return;
-            }
-            handleFail('定位超时，已切换为网络定位');
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          }
-        );
-        return;
+      try {
+        const result = await this.requestCurrentLocation();
+        await this.applyLocation({
+          latitude: result.latitude,
+          longitude: result.longitude,
+          source: 'device'
+        });
+      } catch (error) {
+        await this.handleLocateFail(error);
+      } finally {
+        this.locating = false;
       }
-
-      uni.getLocation({
-        type: 'gcj02',
-        success: (res) => {
-          this.latitude = Number(res.latitude);
-          this.longitude = Number(res.longitude);
-          this.locationName = `${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)}`;
-          this.locating = false;
-        },
-        fail: async (error) => {
-          console.error('getLocation failed', error);
-          await handleFail('请授权位置权限以便快速定位');
-        }
+    },
+    requestCurrentLocation() {
+      // #ifdef H5
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => resolve(position.coords || {}),
+            reject,
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
+        });
+      }
+      // #endif
+      return new Promise((resolve, reject) => {
+        uni.getLocation({
+          type: 'gcj02',
+          isHighAccuracy: true,
+          highAccuracyExpireTime: 3000,
+          success: resolve,
+          fail: reject
+        });
       });
     },
-    async fallbackLocateByIp(message) {
+    async handleLocateFail(error) {
+      const message = this.toLocationFailMessage(error);
+      try {
+        const fallback = await this.fallbackLocateByIp();
+        await this.applyLocation({
+          latitude: fallback.latitude,
+          longitude: fallback.longitude,
+          locationName: fallback.locationName,
+          source: 'network'
+        });
+        this.locationError = message;
+      } catch (fallbackError) {
+        this.latitude = null;
+        this.longitude = null;
+        this.locationName = '';
+        this.locationError = message;
+      }
+    },
+    toLocationFailMessage(error) {
+      const code = error?.code;
+      const errMsg = error?.errMsg || '';
+      if (code === 1 || errMsg.includes('auth deny') || errMsg.includes('permission')) {
+        return '未获得定位权限，已尝试网络定位';
+      }
+      if (code === 2) {
+        return '无法获取精确位置，已尝试网络定位';
+      }
+      if (code === 3 || errMsg.includes('timeout')) {
+        return '定位超时，已尝试网络定位';
+      }
+      return '定位失败，已尝试网络定位';
+    },
+    async fallbackLocateByIp() {
       const result = await new Promise((resolve, reject) => {
         uni.request({
           url: 'https://ipwho.is/',
@@ -193,12 +309,122 @@ export default {
       if (!result || result.success === false || typeof result.latitude !== 'number' || typeof result.longitude !== 'number') {
         throw new Error('fallback failed');
       }
-      this.latitude = Number(result.latitude.toFixed(6));
-      this.longitude = Number(result.longitude.toFixed(6));
       const parts = [result.city, result.region, result.country].filter(Boolean);
-      this.locationName = parts.length ? `${parts.join(' · ')}（网络定位）` : `${this.latitude.toFixed(4)}, ${this.longitude.toFixed(4)}（网络定位）`;
-      this.locationError = message || '已切换为网络定位';
-      this.locating = false;
+      return {
+        latitude: Number(result.latitude.toFixed(6)),
+        longitude: Number(result.longitude.toFixed(6)),
+        locationName: parts.length
+          ? `${parts.join(' · ')}（网络定位）`
+          : `${formatCoords(result.latitude, result.longitude)}（网络定位）`
+      };
+    },
+    async applyLocation({ latitude, longitude, locationName = '', source = 'device' }) {
+      const lat = Number(Number(latitude).toFixed(6));
+      const lng = Number(Number(longitude).toFixed(6));
+      if (Number.isNaN(lat) || Number.isNaN(lng)) {
+        throw new Error('invalid location');
+      }
+      this.latitude = lat;
+      this.longitude = lng;
+      let resolvedName = locationName;
+      if (!resolvedName) {
+        resolvedName = await this.resolveLocationName(lat, lng);
+      }
+      this.locationName = resolvedName || formatCoords(lat, lng);
+      if (source !== 'network') {
+        this.locationError = '';
+      }
+      this.syncMap(lat, lng, this.locationName);
+    },
+    async resolveLocationName(latitude, longitude) {
+      // #ifdef H5
+      const address = await this.reverseGeocodeByH5Map(latitude, longitude);
+      if (address) {
+        return address;
+      }
+      // #endif
+      return `当前位置 ${formatCoords(latitude, longitude)}`;
+    },
+    async reverseGeocodeByH5Map(latitude, longitude) {
+      // #ifdef H5
+      try {
+        if (!this.h5Geocoder) {
+          await this.initializeMap();
+        }
+        if (!this.h5Geocoder) {
+          return '';
+        }
+        const result = await new Promise((resolve, reject) => {
+          this.h5Geocoder.getAddress([longitude, latitude], (status, data) => {
+            if (status === 'complete' && data?.regeocode) {
+              resolve(data.regeocode.formattedAddress || '');
+              return;
+            }
+            reject(new Error('reverse geocode failed'));
+          });
+        });
+        return result || '';
+      } catch (error) {
+        return '';
+      }
+      // #endif
+      return '';
+    },
+    syncMap(latitude, longitude, label = '') {
+      this.mapLatitude = latitude;
+      this.mapLongitude = longitude;
+      this.mapMarkers = [
+        {
+          id: 1,
+          latitude,
+          longitude,
+          width: 28,
+          height: 36,
+          callout: {
+            content: this.buildMarkerText(label),
+            display: 'ALWAYS',
+            padding: 6,
+            borderRadius: 8,
+            bgColor: '#ffffff',
+            color: '#333333'
+          }
+        }
+      ];
+      // #ifdef H5
+      if (this.h5Marker) {
+        this.h5Marker.setPosition([longitude, latitude]);
+      }
+      if (this.h5Map) {
+        this.h5Map.setZoomAndCenter(this.mapScale, [longitude, latitude]);
+      }
+      // #endif
+    },
+    buildMarkerText(label) {
+      const text = label || '紧急求助位置';
+      return text.length > 20 ? `${text.slice(0, 20)}...` : text;
+    },
+    chooseLocationOnMap() {
+      // #ifdef MP-WEIXIN
+      uni.chooseLocation({
+        latitude: this.mapLatitude,
+        longitude: this.mapLongitude,
+        success: async (res) => {
+          const locationName = [res.name, res.address].filter(Boolean).join(' · ') || formatCoords(res.latitude, res.longitude);
+          await this.applyLocation({
+            latitude: res.latitude,
+            longitude: res.longitude,
+            locationName,
+            source: 'manual'
+          });
+        },
+        fail: (error) => {
+          if (error?.errMsg?.includes('cancel')) {
+            return;
+          }
+          this.locationError = '地图选点失败，请稍后重试';
+        }
+      });
+      // #endif
     },
     selectTag(tag) {
       this.selectedTag = this.selectedTag === tag ? '' : tag;
@@ -230,8 +456,6 @@ export default {
           success: async () => {
             this.content = '';
             this.selectedTag = '';
-            this.latitude = null;
-            this.longitude = null;
             await this.loadLatestHelp();
           }
         });
@@ -353,14 +577,64 @@ export default {
   line-height: 1.6;
 }
 
-.btn-location {
+.map-panel,
+.mini-map {
   width: 100%;
+  height: 360rpx;
+  margin-top: 16rpx;
+  border-radius: 18rpx;
+  overflow: hidden;
+  background: #f7f8fc;
+}
+
+.map-panel {
+  position: relative;
+}
+
+.amap-container {
+  width: 100%;
+  height: 100%;
+}
+
+.map-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: #8b5c5c;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.error-mask {
+  color: #ff5c5c;
+}
+
+.map-hint {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 20rpx;
+  color: #8b5c5c;
+}
+
+.action-row {
+  display: flex;
+  gap: 16rpx;
   margin-top: 12rpx;
+}
+
+.btn-location {
+  flex: 1;
   border-radius: 999rpx;
   background: rgba(255, 92, 92, 0.1);
   color: #c83b3b;
   border: 1rpx solid rgba(255, 92, 92, 0.18);
   font-size: 22rpx;
+}
+
+.btn-outline {
+  background: #ffffff;
 }
 
 .error {

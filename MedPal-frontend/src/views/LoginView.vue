@@ -153,8 +153,6 @@
           <!-- 底部链接 -->
           <a-divider />
           <div class="form-footer">
-            <a-button type="link" @click="handleRegister">注册账号</a-button>
-            <a-divider type="vertical" />
             <a-button type="link" @click="handleForgotPassword">忘记密码</a-button>
           </div>
         </div>
@@ -274,11 +272,6 @@ const handleLogin = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-// 注册方法
-const handleRegister = () => {
-  window.location.href = '/register';
 };
 
 // 找回密码方法

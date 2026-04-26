@@ -25,7 +25,8 @@ public class ChatMessageController {
             ChatMessage result = chatMessageService.sendMessage(message);
             return ResultUtils.success(result);
         } catch (Exception e) {
-            return ResultUtils.error(40000, "发送消息失败");
+            String errorMessage = e.getMessage();
+            return ResultUtils.error(40000, (errorMessage == null || errorMessage.trim().isEmpty()) ? "发送消息失败" : errorMessage);
         }
     }
 

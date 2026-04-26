@@ -293,7 +293,7 @@ create table notification(
 drop table if exists chat_message;
 create table chat_message(
     id bigint auto_increment comment 'id' primary key,
-    order_id bigint not null comment '订单id',
+    order_id bigint null comment '订单id，可为空表示非订单聊天',
     sender_id bigint not null comment '发送人id',
     sender_type varchar(50) not null comment '发送人类型：user/companion',
     receiver_id bigint not null comment '接收人id',
@@ -303,7 +303,6 @@ create table chat_message(
     is_read tinyint default 0 comment '是否已读',
     create_time datetime default CURRENT_TIMESTAMP not null comment '创建时间',
     is_delete tinyint default 0 not null comment '是否删除',
-    foreign key (order_id) references appointment_order(id),
     index idx_order_id (order_id),
     index idx_sender_id (sender_id),
     index idx_receiver_id (receiver_id),

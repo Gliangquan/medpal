@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jcen.medpal.mapper.ChatMessageMapper;
+import com.jcen.medpal.model.entity.AppointmentOrder;
 import com.jcen.medpal.model.entity.ChatMessage;
 import com.jcen.medpal.model.entity.User;
 import com.jcen.medpal.service.NotificationService;
+import com.jcen.medpal.service.AppointmentOrderService;
 import com.jcen.medpal.service.ChatMessageService;
 import com.jcen.medpal.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -23,14 +26,65 @@ public class ChatMessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatM
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private AppointmentOrderService appointmentOrderService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     
     @Override
     public ChatMessage sendMessage(ChatMessage message) {
+        if (message == null || message.getSenderId() == null || message.getReceiverId() == null) {
+            throw new IllegalArgumentException("消息参数不完整");
+        }
+        ensureChatMessageTableCompatibility();
+        if (message.getOrderId() == null) {
+            message.setOrderId(resolveLatestOrderId(message.getSenderId(), message.getReceiverId()));
+        }
         message.setIsRead(0);
         message.setCreateTime(LocalDateTime.now());
         this.save(message);
         createChatNotification(message);
         return message;
+    }
+
+    private void ensureChatMessageTableCompatibility() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE chat_message MODIFY COLUMN order_id BIGINT NULL COMMENT '订单id'");
+        } catch (Exception ignored) {
+            // already compatible or table absent in current environment
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE chat_message DROP FOREIGN KEY chat_message_ibfk_1");
+        } catch (Exception ignored) {
+            // foreign key name may differ or already removed
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE chat_message DROP INDEX idx_order_id");
+        } catch (Exception ignored) {
+            // index may already be absent
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE chat_message ADD INDEX idx_order_id (order_id)");
+        } catch (Exception ignored) {
+            // index may already exist
+        }
+    }
+
+    private Long resolveLatestOrderId(Long senderId, Long receiverId) {
+        if (senderId == null || receiverId == null) {
+            return null;
+        }
+        AppointmentOrder latestOrder = appointmentOrderService.lambdaQuery()
+                .and(wrapper -> wrapper
+                        .eq(AppointmentOrder::getUserId, senderId).eq(AppointmentOrder::getCompanionId, receiverId)
+                        .or()
+                        .eq(AppointmentOrder::getUserId, receiverId).eq(AppointmentOrder::getCompanionId, senderId))
+                .orderByDesc(AppointmentOrder::getCreateTime)
+                .last("limit 1")
+                .one();
+        return latestOrder != null ? latestOrder.getId() : null;
     }
 
     private void createChatNotification(ChatMessage message) {

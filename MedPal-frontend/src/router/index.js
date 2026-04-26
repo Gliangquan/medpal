@@ -4,7 +4,6 @@ import { getLoginUser } from '../api';
 import HomeView from '../views/HomeView.vue';
 
 import Login from '../views/LoginView.vue';
-import Register from '../views/RegisterView.vue';
 import LayoutView from '../views/LayoutView.vue';
 import ProfileView from '../views/ProfileView.vue';
 import ChatView from '../views/ChatView.vue';
@@ -29,7 +28,6 @@ import CompanionCertificationView from '../views/admin/CompanionCertificationVie
 // 定义路由
 const routes = [
   { path: '/login', component: Login },
-  { path: '/register', component: Register },
   {
     path: '/',
     component: LayoutView,
@@ -69,7 +67,7 @@ const router = createRouter({
 // 导航守卫：权限校验
 router.beforeEach(async (to, from, next) => {
   // 如果已经在登录页面，直接放行
-  if (to.path === '/login' || to.path === '/register') {
+  if (to.path === '/login') {
     next();
     return;
   }

@@ -334,10 +334,6 @@ export default {
         uni.showToast({ title: '未找到聊天对象', icon: 'none' });
         return false;
       }
-      if (!this.orderId) {
-        uni.showToast({ title: '请从订单详情进入聊天', icon: 'none' });
-        return false;
-      }
       return true;
     },
     async sendTextMessage() {
@@ -350,7 +346,7 @@ export default {
         await this.requestChat('/send', {
           method: 'POST',
           data: {
-            orderId: this.orderId,
+            orderId: this.orderId || null,
             senderId: this.currentUserId,
             senderType: this.senderType,
             receiverId: this.peerId,
@@ -410,7 +406,7 @@ export default {
               await this.requestChat('/send', {
                 method: 'POST',
                 data: {
-                  orderId: this.orderId,
+                  orderId: this.orderId || null,
                   senderId: this.currentUserId,
                   senderType: this.senderType,
                   receiverId: this.peerId,

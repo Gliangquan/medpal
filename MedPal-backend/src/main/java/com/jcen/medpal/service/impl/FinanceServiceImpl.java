@@ -52,11 +52,23 @@ public class FinanceServiceImpl extends ServiceImpl<SettlementMapper, Settlement
 
     @Override
     public boolean processSettlement(Long id) {
-        if (id == null || id <= 0) {
+        if (id == null || id == 0) {
             return false;
         }
         if (!settlementTableExists()) {
             createSettlementTableIfMissing();
+        }
+        if (id < 0) {
+            Settlement fallback = buildSettlementByCompanionId(-id);
+            if (fallback == null) {
+                return false;
+            }
+            fallback.setStatus("settled");
+            fallback.setSettlementTime(LocalDateTime.now());
+            fallback.setSettlementNo(generateSettlementNo(fallback.getCompanionId()));
+            fallback.setCreateTime(LocalDateTime.now());
+            fallback.setUpdateTime(LocalDateTime.now());
+            return settlementMapper.insert(fallback) > 0;
         }
         Settlement settlement = settlementMapper.selectById(id);
         if (settlement == null) {
@@ -193,7 +205,7 @@ public class FinanceServiceImpl extends ServiceImpl<SettlementMapper, Settlement
             Settlement settlement = settlementMap.get(companionId);
             User companion = userMap.get(companionId);
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", settlement != null ? settlement.getId() : companionId);
+            item.put("id", settlement != null ? settlement.getId() : -companionId);
             item.put("companionId", companionId);
             item.put("companionName", companion == null ? fallbackCompanionName(companionId) : companion.getUserName());
             item.put("phone", companion == null ? fallbackCompanionPhone(companionId) : companion.getUserPhone());
@@ -250,9 +262,19 @@ public class FinanceServiceImpl extends ServiceImpl<SettlementMapper, Settlement
                 .filter(item -> String.valueOf(item.get("id")).equals(String.valueOf(id)))
                 .findFirst()
                 .orElse(null);
-        if (matched == null) {
-            return null;
-        }
+        return matched == null ? null : buildSettlementFromRow(matched);
+    }
+
+    private Settlement buildSettlementByCompanionId(Long companionId) {
+        List<Map<String, Object>> rows = buildSettlementRows();
+        Map<String, Object> matched = rows.stream()
+                .filter(item -> String.valueOf(item.get("companionId")).equals(String.valueOf(companionId)))
+                .findFirst()
+                .orElse(null);
+        return matched == null ? null : buildSettlementFromRow(matched);
+    }
+
+    private Settlement buildSettlementFromRow(Map<String, Object> matched) {
         Settlement settlement = new Settlement();
         settlement.setCompanionId(Long.parseLong(String.valueOf(matched.get("companionId"))));
         settlement.setAmount(castBigDecimal(matched.get("amount")));

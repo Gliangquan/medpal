@@ -42,6 +42,13 @@ const userApi = {
       method: 'GET'
     });
   },
+  getUserVOById(id) {
+    return request({
+      url: '/user/get/vo',
+      method: 'GET',
+      params: { id }
+    });
+  },
   updateProfile(payload) {
     return request({
       url: '/user/update/my',

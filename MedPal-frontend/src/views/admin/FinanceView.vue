@@ -194,14 +194,12 @@ const showDetailModal = (record: any) => {
 
 const handleSettle = async (record: any) => {
   try {
-    const response = await processFinanceSettlement(record.id);
-    if (response.code === 0) {
-      message.success(`结算陪诊员 ${record.companionName} 成功`);
-      detailModalVisible.value = false;
-      fetchData();
-    }
-  } catch (error) {
-    message.error('结算失败');
+    await processFinanceSettlement(Number(record.id));
+    message.success(`结算陪诊员 ${record.companionName} 成功`);
+    detailModalVisible.value = false;
+    fetchData();
+  } catch (error: any) {
+    message.error(error?.message || '结算失败');
   }
 };
 
@@ -211,14 +209,12 @@ const handleBatchSettle = async () => {
     return;
   }
   try {
-    const response = await batchProcessFinanceSettlements(selectedRowKeys.value.join(','));
-    if (response.code === 0) {
-      message.success(`批量结算 ${selectedRowKeys.value.length} 条记录成功`);
-      selectedRowKeys.value = [];
-      fetchData();
-    }
-  } catch (error) {
-    message.error('批量结算失败');
+    await batchProcessFinanceSettlements(selectedRowKeys.value.join(','));
+    message.success(`批量结算 ${selectedRowKeys.value.length} 条记录成功`);
+    selectedRowKeys.value = [];
+    fetchData();
+  } catch (error: any) {
+    message.error(error?.message || '批量结算失败');
   }
 };
 

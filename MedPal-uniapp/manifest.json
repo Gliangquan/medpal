@@ -54,6 +54,15 @@
         "setting" : {
             "urlCheck" : false
         },
+        "requiredPrivateInfos" : [
+            "getLocation",
+            "chooseLocation"
+        ],
+        "permission" : {
+            "scope.userLocation" : {
+                "desc" : "用于紧急求助时自动定位并辅助选择求助位置"
+            }
+        },
         "usingComponents" : true
     },
     "vueVersion" : "3"
