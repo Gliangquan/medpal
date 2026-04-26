@@ -264,8 +264,8 @@ public class UserController {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean b = userService.removeById(deleteRequest.getId());
-        return ResultUtils.success(b);
+        int affected = userService.batchDeleteUser(java.util.Collections.singletonList(deleteRequest.getId()), true);
+        return ResultUtils.success(affected > 0);
     }
 
     /**

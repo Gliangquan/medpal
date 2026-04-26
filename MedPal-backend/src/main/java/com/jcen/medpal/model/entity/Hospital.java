@@ -2,6 +2,7 @@ package com.jcen.medpal.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
@@ -24,6 +25,7 @@ public class Hospital implements Serializable {
     private Integer status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    @TableLogic
     private Integer isDelete;
     
     private static final long serialVersionUID = 1L;

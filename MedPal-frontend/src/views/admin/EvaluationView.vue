@@ -7,7 +7,6 @@
     />
 
     <a-card :bordered="false" style="margin-top: 24px">
-      <!-- 搜索和筛选 -->
       <a-row :gutter="16" style="margin-bottom: 24px">
         <a-col :xs="24" :sm="12" :md="6">
           <a-input-search
@@ -32,7 +31,6 @@
         </a-col>
       </a-row>
 
-      <!-- 表格 -->
       <a-table
         :columns="columns"
         :data-source="tableData"
@@ -68,7 +66,6 @@
       </a-table>
     </a-card>
 
-    <!-- 详情模态框 -->
     <a-modal
       v-model:visible="detailModalVisible"
       title="评价详情"
@@ -111,7 +108,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
-import { listEvaluations } from '../../api';
+import { listEvaluations, deleteEvaluation } from '../../api';
 
 const columns = [
   { title: '订单ID', dataIndex: 'orderId', key: 'orderId', width: 100 },
@@ -165,8 +162,16 @@ const handleSearch = () => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const response = await listEvaluations(pagination.current, pagination.pageSize);
-    
+    const orderIdText = searchText.value.trim();
+    const response = await listEvaluations(
+      pagination.current,
+      pagination.pageSize,
+      orderIdText ? Number(orderIdText) || undefined : undefined,
+      undefined,
+      undefined,
+      filterStatus.value || undefined,
+    );
+
     if (response.code === 0) {
       tableData.value = response.data.records || [];
       pagination.total = response.data.total || 0;
@@ -187,8 +192,13 @@ const showDetailModal = (record: any) => {
 
 const handleDelete = async (record: any) => {
   try {
-    message.success(`删除评价成功`);
-    fetchData();
+    const response = await deleteEvaluation(record.id);
+    if (response.code === 0) {
+      message.success('删除评价成功');
+      fetchData();
+    } else {
+      message.error(response.message || '删除失败');
+    }
   } catch (error) {
     message.error('删除失败');
   }

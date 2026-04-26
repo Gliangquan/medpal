@@ -9,7 +9,9 @@ import com.jcen.medpal.model.entity.User;
 import com.jcen.medpal.service.AppointmentOrderService;
 import com.jcen.medpal.service.EvaluationService;
 import com.jcen.medpal.service.UserService;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
@@ -19,7 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping("/evaluation")
 public class EvaluationController {
-    
+
     @Resource
     private EvaluationService evaluationService;
 
@@ -28,7 +30,7 @@ public class EvaluationController {
 
     @Resource
     private AppointmentOrderService appointmentOrderService;
-    
+
     /**
      * 创建评价
      */
@@ -59,22 +61,24 @@ public class EvaluationController {
             return ResultUtils.error(40000, "创建评价失败");
         }
     }
-    
+
     /**
      * 获取评价列表
      */
     @GetMapping("/list")
     public Object listEvaluations(@RequestParam(defaultValue = "1") long current,
-                                 @RequestParam(defaultValue = "10") long size,
-                                 @RequestParam(required = false) Long orderId,
-                                 @RequestParam(required = false) Long companionId,
-                                 @RequestParam(required = false) Long userId) {
+                                  @RequestParam(defaultValue = "10") long size,
+                                  @RequestParam(required = false) Long orderId,
+                                  @RequestParam(required = false) Long companionId,
+                                  @RequestParam(required = false) Long userId,
+                                  @RequestParam(required = false) String status) {
         try {
             Page<Evaluation> page = new Page<>(current, size);
             IPage<Evaluation> result = evaluationService.lambdaQuery()
                     .eq(orderId != null, Evaluation::getOrderId, orderId)
                     .eq(companionId != null, Evaluation::getCompanionId, companionId)
                     .eq(userId != null, Evaluation::getUserId, userId)
+                    .eq(StringUtils.isNotBlank(status), Evaluation::getStatus, status)
                     .orderByDesc(Evaluation::getCreateTime)
                     .page(page);
             return ResultUtils.success(result);
@@ -82,7 +86,7 @@ public class EvaluationController {
             return ResultUtils.error(40000, "查询失败");
         }
     }
-    
+
     /**
      * 获取评价详情
      */
@@ -95,7 +99,7 @@ public class EvaluationController {
             return ResultUtils.error(40000, "查询失败");
         }
     }
-    
+
     /**
      * 获取陪诊员的平均评分
      */
@@ -132,7 +136,7 @@ public class EvaluationController {
     }
 
     /**
-     * 删除评价（仅限未公开的评价）
+     * 删除评价
      */
     @PostMapping("/delete/{id}")
     public Object deleteEvaluation(@PathVariable Long id) {
@@ -141,11 +145,8 @@ public class EvaluationController {
             if (existing == null) {
                 return ResultUtils.error(40400, "评价不存在");
             }
-            if (!"pending".equals(existing.getStatus())) {
-                return ResultUtils.error(40000, "已公开的评价不能删除");
-            }
             boolean result = evaluationService.removeById(id);
-            return result ? ResultUtils.success("删除成功") : ResultUtils.error(40000, "删除失败");
+            return result ? ResultUtils.success(true) : ResultUtils.error(40000, "删除失败");
         } catch (Exception e) {
             return ResultUtils.error(40000, "删除失败");
         }

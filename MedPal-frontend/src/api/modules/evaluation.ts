@@ -25,10 +25,14 @@ export interface Evaluation {
  */
 export function listEvaluations(
   current: number = 1,
-  size: number = 10
+  size: number = 10,
+  orderId?: number,
+  companionId?: number,
+  userId?: number,
+  status?: string,
 ): Promise<BaseResponse<PageData<Evaluation>>> {
   return request.get('/evaluation/list', {
-    params: { current, size },
+    params: { current, size, orderId, companionId, userId, status },
   }) as Promise<BaseResponse<PageData<Evaluation>>>;
 }
 
