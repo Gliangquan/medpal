@@ -209,28 +209,51 @@ export default {
     async handleRegister() {
       if (this.registering) return;
       const { userAccount, userName, userPhone, userPassword, confirmPassword, userRole, idCard } = this.registerForm;
-      if (!userAccount || !userName || !userPhone || !userPassword || !confirmPassword) {
+      const normalizedAccount = (userAccount || '').trim();
+      const normalizedName = (userName || '').trim();
+      const normalizedPhone = (userPhone || '').trim();
+      const normalizedIdCard = (idCard || '').trim();
+
+      if (!normalizedAccount || !normalizedName || !normalizedPhone || !userPassword || !confirmPassword) {
         return uni.showToast({ title: '请填写完整信息', icon: 'none' });
+      }
+      if (normalizedAccount.length < 4) {
+        return uni.showToast({ title: '账号长度不能少于4位', icon: 'none' });
+      }
+      if (!/^1\d{10}$/.test(normalizedPhone)) {
+        return uni.showToast({ title: '请输入正确的手机号', icon: 'none' });
+      }
+      if (!userPassword || userPassword.length < 6) {
+        return uni.showToast({ title: '密码长度不能少于6位', icon: 'none' });
       }
       if (userPassword !== confirmPassword) {
         return uni.showToast({ title: '两次密码不一致', icon: 'none' });
       }
-      if (userRole === 'companion' && !idCard) {
+      if (userRole === 'companion' && !normalizedIdCard) {
         return uni.showToast({ title: '陪诊员需要填写身份证号', icon: 'none' });
       }
       this.registering = true;
       try {
         await userApi.register({
-          userAccount,
-          userName,
-          userPhone,
+          userAccount: normalizedAccount,
+          userName: normalizedName,
+          userPhone: normalizedPhone,
           userPassword,
           checkPassword: confirmPassword,
           userRole,
-          idCard: userRole === 'companion' ? idCard : undefined
+          idCard: userRole === 'companion' ? normalizedIdCard : undefined
         });
         uni.showToast({ title: '注册成功，请登录', icon: 'success' });
         this.showRegister = false;
+        this.registerForm = {
+          userAccount: '',
+          userName: '',
+          userPhone: '',
+          userPassword: '',
+          confirmPassword: '',
+          userRole: this.registerType,
+          idCard: ''
+        };
       } catch (error) {
         uni.showToast({ title: error.message || '注册失败', icon: 'none' });
       } finally {

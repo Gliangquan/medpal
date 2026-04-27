@@ -53,6 +53,21 @@ public class LoginUserVO implements Serializable {
     private String userEmail;
 
     /**
+     * 年龄（患者）
+     */
+    private Integer age;
+
+    /**
+     * 性别（患者）
+     */
+    private String gender;
+
+    /**
+     * 病史（患者）
+     */
+    private String medicalHistory;
+
+    /**
      * 实名认证状态（陪诊员）
      */
     private String realNameStatus;

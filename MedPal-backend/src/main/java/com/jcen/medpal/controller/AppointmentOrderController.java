@@ -3,6 +3,7 @@ package com.jcen.medpal.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.jcen.medpal.common.ResultUtils;
+import com.jcen.medpal.exception.BusinessException;
 import com.jcen.medpal.model.entity.AppointmentOrder;
 import com.jcen.medpal.model.entity.User;
 import com.jcen.medpal.model.vo.OrderDetailVO;
@@ -180,6 +181,8 @@ public class AppointmentOrderController {
                     .orderByDesc(AppointmentOrder::getCreateTime)
                     .page(page);
             return ResultUtils.success(result);
+        } catch (BusinessException e) {
+            return ResultUtils.error(e.getCode(), e.getMessage());
         } catch (Exception e) {
             return ResultUtils.error(40000, "查询订单失败");
         }

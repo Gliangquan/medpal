@@ -48,6 +48,26 @@ public class UserVO implements Serializable {
     private String userPhone;
 
     /**
+     * 邮箱
+     */
+    private String userEmail;
+
+    /**
+     * 年龄（患者）
+     */
+    private Integer age;
+
+    /**
+     * 性别（患者）
+     */
+    private String gender;
+
+    /**
+     * 病史（患者）
+     */
+    private String medicalHistory;
+
+    /**
      * 评分（陪诊员）
      */
     private Double rating;
