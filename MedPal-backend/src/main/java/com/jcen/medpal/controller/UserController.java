@@ -284,8 +284,12 @@ public class UserController {
         }
         User user = new User();
         BeanUtils.copyProperties(userUpdateRequest, user);
+        user.setUserPhone(StringUtils.trimToNull(user.getUserPhone()));
+        validateUniqueContact(user.getId(), user.getUserPhone(), null);
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        User updatedUser = userService.getById(user.getId());
+        userService.ensureLegacyCompanion(updatedUser);
         return ResultUtils.success(true);
     }
 
